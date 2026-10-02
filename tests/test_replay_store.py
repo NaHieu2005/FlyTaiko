@@ -17,3 +17,16 @@ def test_import_old_manifest(tmp_path, monkeypatch):
     jobs=tmp_path/'jobs';jobs.mkdir()
     replay_store.reconcile(tmp_path/'public',jobs)
     assert replay_store.library()['replays'][0]['label']=='Existing'
+
+def test_archived_replay_does_not_return_on_restart(tmp_path, monkeypatch):
+    monkeypatch.setattr(replay_store, 'DATABASE', tmp_path / 'catalogue.sqlite3')
+    replay_store.save('old', 'Old replay', 'complete', {})
+    replay_store.archive('old')
+    replay_store.save('old', 'Old replay', 'complete', {})
+    assert replay_store.library()['replays'] == []
+
+def test_internal_smoke_recordings_are_not_in_public_library(tmp_path, monkeypatch):
+    monkeypatch.setattr(replay_store, 'DATABASE', tmp_path / 'catalogue.sqlite3')
+    replay_store.save('smoke', 'Replay Upload Smoke [NM]', 'complete', {})
+    replay_store.save('song', 'NOCTASTRA [NM]', 'complete', {})
+    assert [r['dataset'] for r in replay_store.library()['replays']] == ['song']

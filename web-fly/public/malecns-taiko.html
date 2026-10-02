@@ -22,30 +22,30 @@ iframe{display:block;width:100%;height:555px;border:0}#timeline{display:flex;gap
 .brain-panel{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px;padding:20px}#brain{width:100%;height:360px;background:#0c1019;border-radius:8px;touch-action:none}#brain canvas{display:block;width:100%}#groups{white-space:pre-wrap;line-height:1.6;max-height:305px;overflow:auto;font-size:13px;color:#c1d0e5}#neural{font-size:14px;color:#a9dcee}
 a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cursor:pointer;color:#bac9df}.tag{display:inline-block;background:#263445;border:1px solid #42566e;border-radius:5px;font-size:12px;padding:3px 8px;margin-right:8px}
 @media(max-width:650px){body{margin:16px auto}h1{font-size:22px}.brain-panel{grid-template-columns:1fr}#timeline{padding:10px}#clock{font-size:12px}#fly-stage{height:340px}}
-</style></head><body>
+</style><link rel="stylesheet" href="replay-app.css?v=20261002-ui2"></head><body>
+<header class="app-header"><a class="brand" href="malecns-taiko.html"><span class="brand-mark">FT</span><span>FlyTaiko<small>NEURAL REPLAY STUDIO</small></span></a><nav><a href="#workspace">Replay library</a><a href="#upload-panel" id="open-upload">+ Create replay</a></nav></header>
+<div class="page-heading"><p class="eyebrow">TAIKO · MALECNS · V25</p>
 <h1>Loading replay…</h1>
-<p class="subtle"><span id="checkpoint-label" class="tag">PHASE A · EPOCH 12</span> Recorded Taiko player · SV native · D/K = Kat · F/J = Don</p>
-<section class="panel" id="upload-panel"><h2>Upload → Generate → Watch</h2>
-<p>v25 Phase C · .osz up to 128 MB · Taiko charts under 10 minutes · one GPU job at a time. Upload only files you may share.</p>
+<p class="subtle"><span id="checkpoint-label" class="tag">V25 · PHASE C</span> Native SV <span class="separator">/</span> D · K = Kat <span class="separator">/</span> F · J = Don</p></div>
+<details class="panel" id="upload-panel"><summary><span>Create a replay<small>Upload an .osz beatmap and run the neural controller</small></span><span class="upload-toggle">+</span></summary><div class="upload-content">
+<p class="subtle">v25 Phase C · Up to 128 MB · Under 10 minutes · One GPU job at a time. Upload only files you may share.</p>
 <div class="controls"><input id="upload-file" type="file" accept=".osz"><button id="upload-map">Upload map</button><progress id="upload-progress" max="100" value="0"></progress></div>
 <div class="controls"><label>Difficulty <select id="upload-chart"><option>Upload a map first</option></select></label><label>Mods <select id="upload-mods"><option>NM</option><option>HR</option><option>DT</option><option>DTHR</option></select></label><button id="generate-replay" disabled>Generate replay</button></div>
-<p id="upload-status" role="status">Ready to upload.</p><p id="upload-result"></p></section>
-<p id="ideology-sv-link" hidden></p>
-<p id="phase-a-link" hidden></p>
-<label class="controls">Replay library <select id="library" aria-label="All saved replays" disabled><option>Loading replays…</option></select></label>
-<div class="controls">
-<select id="examples" aria-label="Version or section within this replay" disabled></select>
+<p id="upload-status" role="status">Ready to upload.</p><p id="upload-result"></p></div></details>
+<section class="panel workspace" id="workspace"><div class="workspace-controls">
+<label class="library-field">SAVED REPLAYS <select id="library" aria-label="All saved replays" disabled><option>Loading replays…</option></select></label>
+<div class="controls playback-controls">
 <label>Skin <select id="skin" aria-label="Taiko skin"><option value="default">Default</option></select></label>
-<button id="play" disabled>Play replay</button><button id="pause" disabled>Pause</button><button id="restart" disabled>Restart</button>
+<div class="transport"><button id="play" class="primary" disabled>Play replay</button><button id="pause" disabled>Pause</button><button id="restart" disabled>Restart</button></div>
 <label>Music volume <input id="volume" type="range" min="0" max="1" step=".01" value=".65" aria-label="Music volume"></label>
 <label>Hitsound <input id="hit-volume" type="range" min="0" max="1" step=".01" value=".55" aria-label="Hitsound volume"></label>
 </div>
-<p id="status" role="status">Loading replay library…</p><p id="metrics" class="subtle"></p>
-<div class="panel">
+<p id="status" role="status" aria-live="polite">Loading replay library…</p><div id="metrics" class="metrics-grid"></div></div>
+<div class="player-frame">
 <iframe id="viewer" src="taiko_viewer.html" title="Taiko replay player"></iframe>
 <div id="timeline"><input id="seek" aria-label="Replay time" type="range" min="0" max="1" step="1" value="0" disabled><span id="clock">0:00 / 0:00</span></div>
-</div>
-<section class="fly-panel panel"><h2>Fly at the Taiko screen</h2>
+</div></section>
+<section class="fly-panel panel"><div class="section-heading"><h2>The neural controller</h2><span class="tag">3D LIVE VIEW</span></div>
 <div id="fly-stage" aria-label="3D fly at a Taiko screen with D F J K keys">
 <div id="fly-overlay">
   <div id="fly-hud" class="hud-box"><div>ACCURACY</div><div id="fly-accuracy" class="hud-big">100.00%</div><div id="fly-time">0:00</div><div class="hud-stats"><span class="great">GREAT <b id="fly-great">0</b></span><span class="good">GOOD <b id="fly-good">0</b></span><span class="miss">MISS <b id="fly-miss">0</b></span><span>EXTRA <b id="fly-extra">0</b></span></div></div>
@@ -66,15 +66,16 @@ a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cur
 <p class="subtle">Drag to rotate. Brightness reflects recorded activity; traveling connection lights are illustrative, not measured signal propagation.</p></section>
 <section><h2>Recorded neuron activity</h2><p id="neural">Loading trace…</p><pre id="groups"></pre></section>
 </div>
-<details><summary>Simulation scope and provenance</summary>
+<details class="provenance"><summary>Simulation scope and provenance</summary>
 <p id="scope-description">Loading replay provenance…</p>
 <p>165,122 neurons and 25,563,197 measured connections. Graded-rate dynamics and key readout are modeling assumptions, not validated biological simulation. Activity and voltage are proxies, not biological Hz/mV. Display targets 120 FPS; recorded neural states are not interpolated.</p>
 <p>The Taiko player is a presentation layer. This does not control the real osu! client; one replay does not demonstrate generalization.</p>
 <p id="source-links">Loading sources…</p>
 <p>Flybody mesh: <a href="data/flybody/NOTICE.md">TuragaLab/flybody, Apache-2.0</a>. 3D scene adapted from <a href="https://github.com/cobanov/fly-connectome-template">fly-connectome-template</a> by <a href="https://github.com/cobanov">Mert Cobanov</a>.</p>
 </details>
+<footer class="app-footer"><span>FlyTaiko · Experimental neural Taiko controller</span><a href="https://github.com/NaHieu2005/FlyTaiko">GitHub ↗</a></footer>
 <script src="runtime-config.js"></script>
 <script type="module" src="replay_upload.js"></script>
-<script type="module" src="malecns_taiko_demo.js?v=20261002-v25-public"></script>
+<script type="module" src="malecns_taiko_demo.js?v=20261002-ui2"></script>
 <script type="module" src="fly_taiko_scene.js?v=kat-lean-1"></script>
 </body></html>

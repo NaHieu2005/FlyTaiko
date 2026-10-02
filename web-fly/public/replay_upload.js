@@ -1,6 +1,7 @@
 const get = id => document.getElementById(id);
 const endpoint = path => window.FLYTAIKO_BACKEND_URL ? new URL(path, window.FLYTAIKO_BACKEND_URL).href : path;
 let uploadId, timer;
+get('open-upload').onclick=()=>{get('upload-panel').open=true;};
 const status = text => { get('upload-status').textContent = text; };
 async function response(res) { const body=await res.json(); if(!res.ok) throw Error(body.error || `HTTP ${res.status}`); return body; }
 get('upload-map').onclick = () => {
@@ -28,7 +29,9 @@ get('generate-replay').onclick=async()=>{
 };
 async function poll(id) {
  try {
-  const job=await response(await fetch(endpoint(`/api/replays/${id}`),{cache:'no-store'}));
+  const res=await fetch(endpoint(`/api/replays/${id}`),{cache:'no-store'});
+  if(res.status===404){clearInterval(timer);localStorage.removeItem('flytaiko-replay-job');status('Previous job is unavailable. Select a saved replay or upload a new map.');return;}
+  const job=await response(res);
   status(`Job ${id}: ${job.status}${job.progress_frames ? ` · ${job.progress_frames} frames` : ''}`);
   if(['complete','failed'].includes(job.status)) {
    clearInterval(timer);localStorage.removeItem('flytaiko-replay-job');get('generate-replay').disabled=!uploadId;

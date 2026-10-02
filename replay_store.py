@@ -11,10 +11,13 @@ def connect():
     db = sqlite3.connect(DATABASE, timeout=30)
     db.execute('PRAGMA journal_mode=WAL')
     db.execute('CREATE TABLE IF NOT EXISTS replays (dataset TEXT PRIMARY KEY, label TEXT NOT NULL, status TEXT NOT NULL, metadata TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)')
+    db.execute('CREATE TABLE IF NOT EXISTS archived_replays (dataset TEXT PRIMARY KEY, archived_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)')
     return db
 
 def save(dataset, label, status, metadata):
     with connect() as db:
+        if db.execute('SELECT 1 FROM archived_replays WHERE dataset=?', (dataset,)).fetchone():
+            return
         db.execute('INSERT INTO replays(dataset,label,status,metadata) VALUES(?,?,?,?) ON CONFLICT(dataset) DO UPDATE SET label=excluded.label,status=excluded.status,metadata=excluded.metadata,updated_at=CURRENT_TIMESTAMP',
                    (dataset, label, status, json.dumps(metadata, ensure_ascii=False)))
 
@@ -27,7 +30,13 @@ def save_job(job):
 def library():
     with connect() as db:
         return {'replays': [dict(dataset=d, label=l, status=s) for d,l,s in
-                            db.execute('SELECT dataset,label,status FROM replays ORDER BY updated_at DESC, label COLLATE NOCASE')]}
+                            db.execute("SELECT dataset,label,status FROM replays WHERE label NOT LIKE 'Replay Upload Smoke%' ORDER BY updated_at DESC, label COLLATE NOCASE")]}
+
+def archive(dataset):
+    """Remember removals so legacy statuses cannot repopulate the catalogue."""
+    with connect() as db:
+        db.execute('INSERT OR IGNORE INTO archived_replays(dataset) VALUES(?)', (dataset,))
+        db.execute('DELETE FROM replays WHERE dataset=?', (dataset,))
 
 def reconcile(public, jobs):
     """Import legacy files once at startup; never scan large demos per request."""

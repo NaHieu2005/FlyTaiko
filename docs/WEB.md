@@ -61,6 +61,12 @@ change on restart and have no production uptime guarantee. Replace it with a
 named tunnel or a stable HTTPS GPU host before advertising a permanent service.
 When the backend URL changes, update `FLYTAIKO_BACKEND_URL` in Vercel and redeploy.
 
+The public library uses a single full-map replay selector. Published manifests
+load independently of historical job-status files. Internal smoke recordings
+are hidden. Retired pre-v25 demos are archived outside the public directory;
+NOCTASTRA versions are retained. SQLite tombstones prevent retired entries
+from reappearing when legacy job statuses are imported at startup.
+
 Git auto-deploy is not connected yet: grant the Vercel GitHub App access to the
 private `NaHieu2005/FlyTaiko` repository and set the Git project root to `web-fly`.
 The current deployment was made from that directory using Vercel CLI. Until Git

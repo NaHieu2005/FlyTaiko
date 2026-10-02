@@ -3,17 +3,6 @@ import * as THREE from './vendor/three.module.js';
 const $ = id => document.getElementById(id), viewer = $('viewer');
 const backend = path => window.FLYTAIKO_BACKEND_URL ?
     new URL(path.replace(/^\/+/, ''), window.FLYTAIKO_BACKEND_URL.replace(/\/+$/, '') + '/').href : path;
-async function revealPhaseAReplay() {
-    if (new URLSearchParams(location.search).get('dataset') === 'playing-god-v19') return;
-    if (!$('phase-a-link').hidden) return;
-    try {
-        const response = await fetch(backend('demos/malecns-taiko-v18-phase-a/manifest.json'),
-            {method: 'HEAD', cache: 'default'});
-        if (response.ok) $('phase-a-link').hidden = false;
-    } catch (_) { /* The background export has not published its manifest yet. */ }
-}
-revealPhaseAReplay();
-setInterval(revealPhaseAReplay, 60000);
 let manifest, game, trace, values, shown = -1, version = 0, aborter;
 let observationBytes, observationPaint = -1;
 let audioPromise, audioStatus = 'Downloading music…', audioPendingPlayback = false;
@@ -90,12 +79,21 @@ async function refreshReplayLibrary(selected) {
     if (!response.ok) throw Error(`Replay library: HTTP ${response.status}`);
     const entries = (await response.json()).replays;
     const picker = $('library');
-    picker.replaceChildren(...entries.map(item => new Option(item.label, item.dataset)));
+    picker.replaceChildren(...entries.map(item => {
+        const version = item.dataset.match(/user-(v\d+)-/)?.[1];
+        const label = item.label.replace(/ · selected/g, '').replace(/ · (full map|toàn bài)/g, '');
+        const duplicate=entries.filter(other=>other.label===item.label && other.dataset.match(/user-(v\d+)-/)?.[1]===version).length>1;
+        return new Option(`${label}${version ? ' · '+version.toUpperCase() : ''}${duplicate ? ' · '+item.dataset.slice(-4) : ''}`, item.dataset);
+    }));
     if (entries.some(item => item.dataset === selected)) picker.value = selected;
     picker.disabled = !entries.length;
     picker.onchange = () => { location.href = `malecns-taiko.html?dataset=${encodeURIComponent(picker.value)}`; };
 }
 async function waitForUserReplay(dataset) {
+    // Published files outlive job records, including imported legacy replays.
+    const published = await fetch(backend(`demos/${dataset}/manifest.json`));
+    if (published.ok) return published.json();
+    if (published.status !== 404) throw Error(`Replay manifest: HTTP ${published.status}`);
     const jobId = dataset.replace(/^user-v(?:23|24|25)-/, '');
     document.querySelector('h1').textContent = 'Generating replay…';
     $('checkpoint-label').textContent = `${dataset.slice(5, 8).toUpperCase()} · INFERENCE`;
@@ -176,6 +174,18 @@ function timeLabel(ms) { const seconds = Math.max(0, Math.floor(ms / 1000)); ret
 function metricsText(m) {
     return `Recorded results: Great ${m.great} · Good ${m.good} · Miss ${m.miss} · Acc ${(100 * m.accuracy).toFixed(2)}% · Spinner ${m.swell.completed}/${m.swell.objects} · Drumroll ${m.drumroll.completed}/${m.drumroll.objects}`;
 }
+function renderMetrics(m) {
+    const stats = [['Accuracy', `${(100*m.accuracy).toFixed(2)}%`, ''],
+        ['Great', m.great, 'great'], ['Good', m.good, 'good'], ['Miss', m.miss, 'miss'],
+        ['Spinner', `${m.swell.completed}/${m.swell.objects}`, ''],
+        ['Drumroll', `${m.drumroll.completed}/${m.drumroll.objects}`, '']];
+    $('metrics').replaceChildren(...stats.map(([label,value,color])=>{
+        const card=document.createElement('div');card.className='metric-card '+color;
+        const caption=document.createElement('span');caption.textContent=label.toUpperCase();
+        const number=document.createElement('b');number.textContent=value;
+        card.append(caption,number);return card;
+    }));
+}
 async function loadObservations(newTrace, mine, signal) {
     const spec = newTrace.observations;
     if (!spec) return;
@@ -247,7 +257,7 @@ async function load(index) {
         rebuildEdges();
         w.loadRecordedReplay(game, null); w.setVolume(Number($('volume').value));
         $('seek').max = game.duration_ms; $('seek').value = 0;
-        $('metrics').textContent = metricsText(game.metrics);
+        renderMetrics(game.metrics);
         $('clock').textContent = `0:00 / ${timeLabel(game.duration_ms)}`;
         $('status').textContent = manifest.audio_url ? 'Ready. Press Play replay.' : 'Ready. This replay has no music file.';
         for (const id of ['play', 'pause', 'restart', 'seek']) $(id).disabled = false;
@@ -261,7 +271,6 @@ async function load(index) {
         if (mine === version && error.name !== 'AbortError') { $('status').textContent = 'Error: ' + error.message; $('neural').textContent = 'Replay load failed. Select it again to retry.'; }
     }
 }
-$('examples').onchange = () => load(Number($('examples').value)).catch(e => $('status').textContent = 'Error: ' + e.message);
 $('skin').onchange = async () => {
     const selected = $('skin').value;
     try {
@@ -463,19 +472,21 @@ async function initialize() { try {
     const response = await fetch(backend('/api/replays'), {cache:'no-store'});
     if (!response.ok) throw Error('Replay library unavailable: HTTP '+response.status);
     const rows=(await response.json()).replays;
-    const dataset=requested || rows.find(r=>r.status==='complete')?.dataset;
+    const selected=rows.find(r=>r.dataset===requested);
+    const dataset=selected?.dataset || rows.find(r=>r.status==='complete' && r.dataset.startsWith('user-v25-') && /NOCTASTRA/i.test(r.label))?.dataset || rows.find(r=>r.status==='complete')?.dataset;
+    if(requested !== dataset && dataset) history.replaceState(null,'','?dataset='+encodeURIComponent(dataset));
     await refreshReplayLibrary(dataset);
     if(!dataset) { $('status').textContent='Upload a map to create your first replay.'; document.querySelector('h1').textContent='FlyTaiko'; return; }
     if(!/^[a-zA-Z0-9-]+$/.test(dataset)) throw Error('Invalid dataset');
     manifest = /^user-v(?:23|24|25)-/.test(dataset) ? await waitForUserReplay(dataset) : await json('demos/'+dataset+'/manifest.json');
-    document.querySelector('h1').textContent=manifest.replays[0]?.label || 'FlyTaiko';
-    $('checkpoint-label').textContent='RECORDED REPLAY';
+    document.querySelector('h1').textContent=(manifest.replays[0]?.label || 'FlyTaiko').replace(/ · selected/g,'').replace(/ · (full map|toàn bài)/g,'');
+    $('checkpoint-label').textContent=(dataset.match(/user-(v\d+)-/)?.[1]?.toUpperCase() || 'MODEL')+' · RECORDED REPLAY';
     $('scope-description').textContent='Offline checkpoint inference. Recorded keys and judgments are preserved, not snapped to notes. This does not control the real osu! client.';
     const link=document.createElement('a'); link.href=backend('demos/'+dataset+'/manifest.json'); link.textContent='Manifest / provenance'; $('source-links').replaceChildren(link);
-    $('examples').replaceChildren(); manifest.replays.forEach((r,i)=>$('examples').add(new Option(r.label,i))); $('examples').disabled=false;
     anatomy().catch(e=>{$('brain').textContent='Anatomy load failed: '+e.message;});
     bytes(manifest.sample_edges.url).then(async data=>{await verify(data,manifest.sample_edges.sha256);edgeRows=JSON.parse(new TextDecoder().decode(data));rebuildEdges();}).catch(e=>{$('neural').title=e.message;});
-    await load(0);
+    const fullIndex=manifest.replays.findIndex(r=>r.kind==='full');
+    await load(fullIndex < 0 ? 0 : fullIndex);
 } catch(e) { $('status').textContent='Demo load failed: '+e.message; } }
 window.addEventListener('replay-created',e=>{ location.href='?dataset='+encodeURIComponent(e.detail); });
 initialize();
