@@ -8,8 +8,10 @@ const database=new Promise((resolve,reject)=>{const r=indexedDB.open('flytaiko-s
 async function player(){for(let i=0;i<200;i++){const p=$('viewer').contentWindow;if(p?.registerRecordedSkin)return p;await new Promise(r=>setTimeout(r,100));}throw Error('Player unavailable');}
 async function install(record){
  const urls={images:{},sounds:{}};for(const a of record.assets)urls[a.type][a.key]=URL.createObjectURL(new Blob([a.bytes],{type:a.mime}));
- try{await(await player()).registerRecordedSkin(record.id,urls);}finally{for(const g of Object.values(urls))for(const url of Object.values(g))URL.revokeObjectURL(url);}
+ let report;
+ try{report=await(await player()).registerRecordedSkin(record.id,urls);}finally{for(const g of Object.values(urls))for(const url of Object.values(g))URL.revokeObjectURL(url);}
  if(![...$('skin').options].some(o=>o.value===record.id))$('skin').add(new Option(record.name,record.id));
+ return report;
 }
 async function importSkin(files,archive){
  if(importing)return;importing=true;
@@ -21,7 +23,8 @@ async function importSkin(files,archive){
   entries.sort((a,b)=>Number(/(^|\/)taiko\//.test(b.path))-Number(/(^|\/)taiko\//.test(a.path)));
   const assets=[];let total=0;
   for(const [type,map]of Object.entries({images,sounds}))for(const [key,base]of Object.entries(map)){
-   const aliases=[base]; // Never substitute osu!standard normal-hit* samples.
+   const suffix={don:'normal',kat:'clap',finish:'finish',whistle:'whistle',roll:'normal'}[key];
+   const aliases=suffix?[base,`taiko-normal-hit${suffix}`,`taiko-soft-hit${suffix}`,`taiko-drum-hit${suffix}`]:[base]; // Taiko-prefixed samples only.
    const names=type==='images'?[base+'@2x.png',base+'.png',base+'-0@2x.png',base+'-0.png']:aliases.flatMap(b=>[b+'.ogg',b+'.wav',b+'.mp3']);const e=names.map(n=>entries.find(f=>f.name===n)).find(Boolean);if(!e)continue;
    if(e.size>8*1024**2)throw Error('Asset limit: 8 MB');const bytes=await e.read();total+=bytes.byteLength;if(bytes.byteLength>8*1024**2||total>40*1024**2)throw Error('Selected assets exceed size limit');
    assets.push({type,key,bytes,mime:{png:'image/png',ogg:'audio/ogg',wav:'audio/wav',mp3:'audio/mpeg'}[e.name.split('.').pop()]});
@@ -30,10 +33,12 @@ async function importSkin(files,archive){
   const name=archive?archive.name.replace(/\.(osk|zip)$/i,''):(files[0]?.webkitRelativePath.split('/')[0]||'Custom skin');
   const db=await database,duplicates=(await savedSkins(db)).filter(r=>skinKey(r.name)===skinKey(name));
   const record={id:duplicates[0]?.id||'custom-'+crypto.randomUUID(),name,assets};
-  await install(record);await new Promise((resolve,reject)=>{const tx=db.transaction('skins','readwrite'),store=tx.objectStore('skins');for(const old of duplicates)store.delete(old.id);store.put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Skin save aborted'));});
+  const report=await install(record);await new Promise((resolve,reject)=>{const tx=db.transaction('skins','readwrite'),store=tx.objectStore('skins');for(const old of duplicates)store.delete(old.id);store.put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Skin save aborted'));});
   for(const option of [...$('skin').options])if(option.value!==record.id && duplicates.some(old=>old.id===option.value)){(await player()).removeRecordedSkin(option.value);option.remove();localStorage.removeItem('flytaiko-hit-volume-'+option.value);}
   [...$('skin').options].find(o=>o.value===record.id).textContent=name;
-  $('skin').value=record.id;await $('skin').onchange();$('skin-status').textContent=`${record.name}: ${assets.length} assets saved in this browser.`;
+  $('skin').value=record.id;await $('skin').onchange();
+  const missing=['don','kat'].filter(k=>!report.sounds.includes(k));
+  $('skin-status').textContent=`${record.name}: ${assets.length} assets saved in this browser. Hitsounds: ${report.sounds.join(', ')||'none'}.${missing.length?' Default fallback: '+missing.join(', ')+'.':''}${report.soundErrors.length?' Could not decode: '+report.soundErrors.join(', ')+'.':''}`;
  }catch(e){$('skin-status').textContent='Skin import failed: '+e.message;}finally{importing=false;$('skin-archive').value='';$('skin-folder').value='';}
 }
 $('skin-archive').onchange=e=>{if(e.target.files[0])importSkin(null,e.target.files[0]);};

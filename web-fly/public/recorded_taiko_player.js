@@ -45,11 +45,16 @@
         if (sprites.rollMiddle) sprites.rollMiddleTint = tintSprite(sprites.rollMiddle,'roll',false);
         if (sprites.rollEnd) sprites.rollEndTint = tintSprite(sprites.rollEnd,'roll',false);
         const sounds = {};
+        const soundErrors=[];
         for (const [kind,url] of Object.entries(urls.sounds)) {
-            const response = await fetch(url);
-            sounds[kind] = await audioContext.decodeAudioData(await response.arrayBuffer());
+            try {
+                const response = await fetch(url);
+                if(!response.ok)throw Error('HTTP '+response.status);
+                sounds[kind] = await audioContext.decodeAudioData(await response.arrayBuffer());
+            }catch(error){soundErrors.push(kind);}
         }
         customSkins.set(name,{sprites,sounds});
+        return {sounds:Object.keys(sounds),soundErrors};
     };
     const KOISHI_ROOT = 'skins/koishi/';
     const KOISHI_IMAGES = {
@@ -275,9 +280,9 @@
             const kind = big ? 'big' : 'hit';
             const ink = color === '#5ab4f0' ? 'kat' : color === '#e6b419' ? 'roll' : 'don';
             ctx.drawImage(skinSprites[`${kind}_${ink}`], x - size / 2, Y - size / 2, size, size);
-            const beat=60000/(Number(replay.metadata?.bpm)||120);
-            const alternate=combo>=50 && Math.floor(clock()/(beat/(combo>=150?2:1)))%2;
-            const overlay=(alternate && skinSprites[`${kind}Overlay1`]) || skinSprites[`${kind}Overlay`];
+            // Static presentation: do not invent beat/combo animation without
+            // the skin's full animation and native timing configuration.
+            const overlay=skinSprites[`${kind}Overlay`] || skinSprites[`${kind}Overlay1`];
             if (overlay) ctx.drawImage(overlay, x - size / 2, Y - size / 2, size, size);
             return;
         }
