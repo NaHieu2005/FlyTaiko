@@ -282,7 +282,9 @@
             ctx.drawImage(skinSprites[`${kind}_${ink}`], x - size / 2, Y - size / 2, size, size);
             // Static presentation: do not invent beat/combo animation without
             // the skin's full animation and native timing configuration.
-            const overlay=skinSprites[`${kind}Overlay`] || skinSprites[`${kind}Overlay1`];
+            // Koishi's static/zeroth frame is only a rim; frame 1 contains
+            // the authored gloss. Keep the decorated frame without cycling.
+            const overlay=skinSprites[`${kind}Overlay1`] || skinSprites[`${kind}Overlay`];
             if (overlay) ctx.drawImage(overlay, x - size / 2, Y - size / 2, size, size);
             return;
         }
