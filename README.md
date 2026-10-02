@@ -82,3 +82,7 @@ Neuron dynamics, visual sampling and the trained decoder are engineering
 models. The activity display uses recorded model values and does not claim
 measured biological firing rates. The current release generates offline
 replays; it does not control an installed osu! client.
+# Documentation
+
+- [Training and dataset prerequisites](docs/TRAINING.md)
+- [All-in-one web, replay database, uploads and deployment](docs/WEB.md)

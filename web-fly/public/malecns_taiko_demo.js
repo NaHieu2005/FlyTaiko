@@ -8,7 +8,7 @@ async function revealPhaseAReplay() {
     if (!$('phase-a-link').hidden) return;
     try {
         const response = await fetch(backend('demos/malecns-taiko-v18-phase-a/manifest.json'),
-            {method: 'HEAD', cache: 'no-cache'});
+            {method: 'HEAD', cache: 'default'});
         if (response.ok) $('phase-a-link').hidden = false;
     } catch (_) { /* The background export has not published its manifest yet. */ }
 }
@@ -16,7 +16,7 @@ revealPhaseAReplay();
 setInterval(revealPhaseAReplay, 60000);
 let manifest, game, trace, values, shown = -1, version = 0, aborter;
 let observationBytes, observationPaint = -1;
-let audioPromise, audioStatus = 'Đang tải nhạc…', audioPendingPlayback = false;
+let audioPromise, audioStatus = 'Downloading music…', audioPendingPlayback = false;
 let brainDirty = true, lastHUD = 0, loadComplete = false;
 let edgeRows = [], edgeLines, lightNodes, lightPulses, neuronContrast, neuronIntensity;
 let lastBrainPaint = 0;
@@ -45,22 +45,22 @@ surface.onpointermove = e => {
 };
 const ready = new Promise((resolve, reject) => {
     if (viewer.contentWindow?.loadRecordedReplay) return resolve(viewer.contentWindow);
-    const timeout = setTimeout(() => reject(Error('Player không tải được. Hãy tải lại trang.')), 30000);
+    const timeout = setTimeout(() => reject(Error('Player failed to load. Reload the page.')), 30000);
     viewer.addEventListener('load', () => {
         clearTimeout(timeout);
-        if (!viewer.contentWindow.loadRecordedReplay) reject(Error('Player thiếu recorded_taiko_player.js'));
+        if (!viewer.contentWindow.loadRecordedReplay) reject(Error('Player is missing recorded_taiko_player.js'));
         else resolve(viewer.contentWindow);
     }, {once: true});
 });
 function safePath(path) {
-    if (!/^demos\/(?:malecns-taiko(?:-v1[6789](?:-phase-a)?)?|playing-god-v(?:19|23)|ideoless-v23|user-v(?:23|24|25)-[a-f0-9]{12})\/[a-zA-Z0-9_.-]+$/.test(path)) throw Error('Đường dẫn demo không hợp lệ');
+    if (!/^demos\/(?:malecns-taiko(?:-v1[6789](?:-phase-a)?)?|playing-god-v(?:19|23)|ideoless-v23|user-v(?:23|24|25)-[a-f0-9]{12})\/[a-zA-Z0-9_.-]+$/.test(path)) throw Error('Invalid demo path');
     return path;
 }
 async function bytes(path, signal, progress) {
     const url = safePath(path);
     let response;
     for (let attempt = 0; attempt < 4; attempt++) {
-        try { response = await fetch(backend(url), {signal, cache: 'no-cache'}); }
+        try { response = await fetch(backend(url), {signal, cache: 'default'}); }
         catch (error) {
             if (signal?.aborted || attempt === 3) throw error;
             await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
@@ -97,38 +97,38 @@ async function refreshReplayLibrary(selected) {
 }
 async function waitForUserReplay(dataset) {
     const jobId = dataset.replace(/^user-v(?:23|24|25)-/, '');
-    document.querySelector('h1').textContent = 'Đang tạo replay…';
-    $('checkpoint-label').textContent = `${dataset.slice(5, 8).toUpperCase()} · ĐANG SUY LUẬN`;
+    document.querySelector('h1').textContent = 'Generating replay…';
+    $('checkpoint-label').textContent = `${dataset.slice(5, 8).toUpperCase()} · INFERENCE`;
     while (true) {
         const response = await fetch(backend(`/api/replays/${jobId}`), {cache: 'no-store'});
-        if (!response.ok) throw Error(`Không đọc được trạng thái job ${jobId}: HTTP ${response.status}`);
+        if (!response.ok) throw Error(`Cannot read job status ${jobId}: HTTP ${response.status}`);
         const job = await response.json();
-        if (job.status === 'failed') throw Error(`Job ${jobId} thất bại: ${job.error || 'xem worker.log'}`);
+        if (job.status === 'failed') throw Error(`Job ${jobId} failed: ${job.error || 'see worker.log'}`);
         if (job.status === 'complete') {
             refreshReplayLibrary(dataset).catch(() => {});
             return json(`demos/${dataset}/manifest.json`);
         }
         const progress = job.progress_frames && job.total_frames_approx ?
             ` · ${job.progress_frames.toLocaleString()} / ~${job.total_frames_approx.toLocaleString()} frame` : '';
-        $('status').textContent = `${job.chart?.title || 'Replay'} [${job.mods || 'NM'}]: ${job.status}${progress}. Trang sẽ tự mở replay khi hoàn tất.`;
+        $('status').textContent = `${job.chart?.title || 'Replay'} [${job.mods || 'NM'}]: ${job.status}${progress}. The replay opens automatically when ready.`;
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
 }
 async function verify(buffer, expected) {
-    if (!crypto.subtle) throw Error('Cần mở demo qua localhost để kiểm tra SHA-256');
+    if (!crypto.subtle) throw Error('Use HTTPS or localhost for SHA-256 verification');
     const digest = await crypto.subtle.digest('SHA-256', buffer);
     const actual = Array.from(new Uint8Array(digest), v => v.toString(16).padStart(2, '0')).join('');
-    if (actual !== expected) throw Error('SHA-256 của dữ liệu demo không khớp');
+    if (actual !== expected) throw Error('Demo SHA-256 mismatch');
 }
 function audio() {
     if (!manifest.audio_url) return Promise.resolve(null);
     if (!audioPromise) audioPromise = (async () => {
         const buffer = await bytes(manifest.audio_url, undefined, (loaded, total) => {
-            audioStatus = `Đang tải nhạc ${(loaded / 1048576).toFixed(1)}${total ? ` / ${(total / 1048576).toFixed(1)}` : ''} MB…`;
+            audioStatus = `Downloading music ${(loaded / 1048576).toFixed(1)}${total ? ` / ${(total / 1048576).toFixed(1)}` : ''} MB…`;
             if (!loadComplete || audioPendingPlayback) $('status').textContent = audioStatus;
         });
         await verify(buffer, manifest.audio_sha256);
-        audioStatus = 'Đang giải mã nhạc…';
+        audioStatus = 'Decoding music…';
         if (!loadComplete || audioPendingPlayback) $('status').textContent = audioStatus;
         return (await ready).taikoState.audioContext.decodeAudioData(buffer);
     })().catch(error => { audioPromise = null; throw error; });
@@ -136,7 +136,7 @@ function audio() {
 }
 async function anatomy() {
     const buffer = await bytes(manifest.anatomy.url); await verify(buffer, manifest.anatomy.sha256);
-    if (buffer.byteLength !== manifest.anatomy.count * 3 * 4) throw Error('Sai kích thước giải phẫu');
+    if (buffer.byteLength !== manifest.anatomy.count * 3 * 4) throw Error('Invalid anatomy size');
     const raw = new Int32Array(buffer), lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < raw.length; i++) { const a = i % 3; lo[a] = Math.min(lo[a], raw[i]); hi[a] = Math.max(hi[a], raw[i]); }
     const scale = 180 / Math.max(...hi.map((v, a) => v - lo[a]));
@@ -174,16 +174,16 @@ function rebuildEdges() {
 }
 function timeLabel(ms) { const seconds = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
 function metricsText(m) {
-    return `Kết quả đã ghi: Great ${m.great} · Good ${m.good} · Miss ${m.miss} · Acc ${(100 * m.accuracy).toFixed(2)}% · Spinner ${m.swell.completed}/${m.swell.objects} · Drumroll ${m.drumroll.completed}/${m.drumroll.objects}`;
+    return `Recorded results: Great ${m.great} · Good ${m.good} · Miss ${m.miss} · Acc ${(100 * m.accuracy).toFixed(2)}% · Spinner ${m.swell.completed}/${m.swell.objects} · Drumroll ${m.drumroll.completed}/${m.drumroll.objects}`;
 }
 async function loadObservations(newTrace, mine, signal) {
     const spec = newTrace.observations;
     if (!spec) return;
-    $('input-status').textContent = 'Đang tải ảnh RGB đầu vào…';
+    $('input-status').textContent = 'Loading recorded RGB inputs…';
     try {
         const observed = await bytes(spec.url, signal, (loaded, total) => {
             if (mine === version) $('input-status').textContent =
-                `Đang tải ảnh RGB ${(loaded / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} MB…`;
+                `Downloading RGB inputs ${(loaded / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} MB…`;
         });
         await verify(observed, spec.sha256);
         const bounds = spec.retina_bounds, warp = spec.retina_x_warp;
@@ -197,16 +197,16 @@ async function loadObservations(newTrace, mine, signal) {
             spec.frames.some(([offset, length, stamp], i) => !Number.isInteger(offset) ||
                 !Number.isInteger(length) || length < 32 || offset < 0 || offset + length > observed.byteLength ||
                 !Number.isInteger(stamp) || stamp > newTrace.time_ms[i] || newTrace.time_ms[i] - stamp > 50))
-            throw Error('Sai chỉ mục ảnh RGB đã ghi');
+            throw Error('Invalid recorded RGB index');
         if (mine !== version) return;
         observationBytes = observed;
         window.taikoDemo.observations = observed;
         observationPaint = -1;
-        $('input-status').textContent = 'Ảnh RGB đã sẵn sàng.';
+        $('input-status').textContent = 'Recorded RGB inputs ready.';
         if (shown >= 0) updateObservation(shown);
     } catch (error) {
         if (mine === version && error.name !== 'AbortError') $('input-status').textContent =
-            'Không tải được ảnh RGB: ' + error.message;
+            'RGB input download failed: ' + error.message;
     }
 }
 async function load(index) {
@@ -214,26 +214,26 @@ async function load(index) {
     loadComplete = false;
     const w = await ready; w.pauseGame();
     for (const id of ['play', 'pause', 'restart', 'seek']) $(id).disabled = true;
-    $('status').textContent = 'Đang tải replay và trace thực…';
+    $('status').textContent = 'Loading replay and recorded trace…';
     const item = manifest.replays[index];
     try {
         const [newGame, newTrace] = await Promise.all([json(item.gameplay_url, signal), json(item.trace_url, signal)]);
         if (mine !== version) return;
-        $('status').textContent = 'Đang tải hoạt động neuron…';
+        $('status').textContent = 'Loading neuron activity…';
         const binary = await bytes(newTrace.data_url, signal, (loaded, total) => {
-            if (mine === version) $('status').textContent = `Đang tải trace ${(loaded / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} MB…`;
+            if (mine === version) $('status').textContent = `Downloading trace ${(loaded / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} MB…`;
         });
         await verify(binary, newTrace.sha256);
         const expected = newTrace.shape.reduce((a, b) => a * b, 1) * 4;
         if (binary.byteLength !== expected || newTrace.shape[0] !== newTrace.time_ms.length ||
             newTrace.shape[1] !== 2 || newTrace.shape[2] !== newTrace.body_ids.length ||
-            newTrace.sample_soma.length !== newTrace.body_ids.length) throw Error('Sai kích thước trace thực');
+            newTrace.sample_soma.length !== newTrace.body_ids.length) throw Error('Invalid recorded trace size');
         if (mine !== version) return;
         game = newGame; trace = newTrace; values = new Float32Array(binary); shown = -1;
         observationBytes = null; observationPaint = -1;
         $('model-input').getContext('2d').clearRect(0, 0, 512, 96);
         $('retina-input').getContext('2d').clearRect(0, 0, 137, 53);
-        $('input-status').textContent = newTrace.observations ? 'Đang tải ảnh RGB đầu vào…' : 'Replay này chưa có ảnh RGB đầu vào đã ghi.';
+        $('input-status').textContent = newTrace.observations ? 'Loading recorded RGB inputs…' : 'This replay has no recorded RGB inputs.';
         const n = trace.body_ids.length;
         // Display contrast is per recorded soma, not a biological firing rate.
         // A global 0.5-unit floor hid most measured, located neurons entirely.
@@ -249,19 +249,19 @@ async function load(index) {
         $('seek').max = game.duration_ms; $('seek').value = 0;
         $('metrics').textContent = metricsText(game.metrics);
         $('clock').textContent = `0:00 / ${timeLabel(game.duration_ms)}`;
-        $('status').textContent = manifest.audio_url ? 'Sẵn sàng. Nhấn Phát replay để nghe nhạc và xem taiko.' : 'Sẵn sàng. Nhấn Phát replay để xem taiko (chưa có file nhạc trên server).';
+        $('status').textContent = manifest.audio_url ? 'Ready. Press Play replay.' : 'Ready. This replay has no music file.';
         for (const id of ['play', 'pause', 'restart', 'seek']) $(id).disabled = false;
         loadComplete = true; resize();
         window.taikoDemo = {game, trace, values, observations: null, scope: item.kind, ready: true};
-        loadObservations(newTrace, mine, signal);
+        $('load-inputs').disabled=!newTrace.observations; $('load-inputs').onclick=()=>{ $('load-inputs').disabled=true; loadObservations(newTrace,mine,signal).finally(()=>{$('load-inputs').disabled=false;}); }; $('input-status').textContent='Recorded inputs available on demand.';
         if (manifest.audio_url) audio().catch(error => {
-            if (mine === version) $('status').textContent = 'Không tải được nhạc: ' + error.message;
+            if (mine === version) $('status').textContent = 'Music download failed: ' + error.message;
         });
     } catch (error) {
-        if (mine === version && error.name !== 'AbortError') { $('status').textContent = 'Lỗi: ' + error.message; $('neural').textContent = 'Không tải được replay. Có thể chọn lại bài để thử lại.'; }
+        if (mine === version && error.name !== 'AbortError') { $('status').textContent = 'Error: ' + error.message; $('neural').textContent = 'Replay load failed. Select it again to retry.'; }
     }
 }
-$('examples').onchange = () => load(Number($('examples').value)).catch(e => $('status').textContent = 'Lỗi: ' + e.message);
+$('examples').onchange = () => load(Number($('examples').value)).catch(e => $('status').textContent = 'Error: ' + e.message);
 $('skin').onchange = async () => {
     const selected = $('skin').value;
     try {
@@ -274,7 +274,7 @@ $('skin').onchange = async () => {
     catch (error) {
         $('skin').value = 'default';
         await viewer.contentWindow.setRecordedTaikoSkin('default');
-        $('status').textContent = 'Không tải được skin: ' + error.message;
+        $('status').textContent = 'Skin load failed: ' + error.message;
     }
 };
 $('play').onclick = async () => {
@@ -288,21 +288,21 @@ $('play').onclick = async () => {
         const resume = w.taikoState.audioContext.resume();
         if (manifest.audio_url) {
             audioPendingPlayback = true;
-            $('status').textContent = audioPromise ? audioStatus : 'Đang tải nhạc 0 MB…';
+            $('status').textContent = audioPromise ? audioStatus : 'Downloading music 0 MB…';
             const buffer = await audio();
             if (mine !== version) return;
             w.setRecordedAudio(buffer);
         }
-        $('status').textContent = 'Đang khởi động âm thanh…';
+        $('status').textContent = 'Starting audio…';
         await resume;
         await w.startGame();
-        $('status').textContent = 'Đang phát replay · phím và judgment giữ nguyên.';
+        $('status').textContent = 'Playing recorded replay.';
     }
-    catch (e) { $('status').textContent = 'Không phát được nhạc: ' + e.message; }
+    catch (e) { $('status').textContent = 'Audio playback failed: ' + e.message; }
     finally { audioPendingPlayback = false; }
 };
-$('pause').onclick = () => { viewer.contentWindow.pauseGame(); $('status').textContent = 'Đã tạm dừng.'; };
-$('restart').onclick = () => { viewer.contentWindow.pauseGame(); viewer.contentWindow.seekGame(0); $('status').textContent = 'Đã về đầu. Nhấn Phát replay.'; };
+$('pause').onclick = () => { viewer.contentWindow.pauseGame(); $('status').textContent = 'Paused.'; };
+$('restart').onclick = () => { viewer.contentWindow.pauseGame(); viewer.contentWindow.seekGame(0); $('status').textContent = 'Restarted. Press Play replay.'; };
 $('seek').oninput = () => viewer.contentWindow.seekGame(Number($('seek').value));
 $('volume').oninput = () => viewer.contentWindow.setVolume(Number($('volume').value));
 $('hit-volume').oninput = () => {
@@ -312,7 +312,7 @@ $('hit-volume').oninput = () => {
 };
 window.addEventListener('message', e => {
     if (e.source !== viewer.contentWindow || e.origin !== location.origin) return;
-    if (e.data?.type === 'TAIKO_RECORDED_ENDED') $('status').textContent = 'Đã phát hết replay. Có thể chọn toàn bài hoặc phát lại.';
+    if (e.data?.type === 'TAIKO_RECORDED_ENDED') $('status').textContent = 'Replay finished.';
 });
 function sample(time) {
     let lo = 0, hi = trace.time_ms.length - 1;
@@ -343,17 +343,17 @@ async function updateObservation(index) {
             const crop = $('retina-input');
             if (crop.width !== width || crop.height !== height) { crop.width = width; crop.height = height; }
             crop.getContext('2d').drawImage(bitmap, x, y, width, height, 0, 0, width, height);
-            $('input-status').textContent = `Đầu vào thật lúc ${(observationTime / 1000).toFixed(3)} s · frame ghi ${(trace.time_ms[index] / 1000).toFixed(3)} s · ${frameWidth}×${frameHeight} RGB`;
+            $('input-status').textContent = `Recorded input at ${(observationTime / 1000).toFixed(3)} s · recorded frame ${(trace.time_ms[index] / 1000).toFixed(3)} s · ${frameWidth}×${frameHeight} RGB`;
         }
         bitmap.close();
     } catch (error) {
-        if (mine === version) $('input-status').textContent = 'Không giải mã được frame RGB: ' + error.message;
+        if (mine === version) $('input-status').textContent = 'RGB frame decoding failed: ' + error.message;
     }
 }
 function updateBrain(index) {
     shown = index;
     updateObservation(index);
-        if (index < 0) { $('neural').textContent = 'Chưa có frame neuron được ghi tại thời điểm này.'; return; }
+        if (index < 0) { $('neural').textContent = 'No recorded neuron frame at this time.'; return; }
     let activeCount = 0, visibleSomaCount = 0;
     const n = trace.body_ids.length;
     for (let i = 0; i < n; i++) {
@@ -362,11 +362,11 @@ function updateBrain(index) {
         if (delta >= .5) activeCount++;
         if (trace.sample_soma[i] && neuronIntensity[i] > .16) visibleSomaCount++;
     }
-    $('neural').textContent = `Trace ${(trace.time_ms[index] / 1000).toFixed(3)} s · ${activeCount}/${n} neuron mẫu đổi ≥0,5 proxy · ${visibleSomaCount} soma sáng (chuẩn hoá độ tương phản) · không nội suy`;
+    $('neural').textContent = `Trace ${(trace.time_ms[index] / 1000).toFixed(3)} s · ${activeCount}/${n} sampled neurons changed ≥0.5 proxy · ${visibleSomaCount} illuminated somas (contrast normalized) · no interpolation`;
     $('groups').textContent = trace.group_names.map((name, i) => {
         const row = trace.groups[index][i];
-        return `${name || '(chưa phân nhóm)'}: ${row[0].toFixed(2)} activity proxy · ${row[1].toFixed(2)} voltage proxy`;
-    }).join('\n') + '\n\nGraded-rate · no discrete spikes · không phải Hz/mV sinh học';
+        return `${name || '(ungrouped)'}: ${row[0].toFixed(2)} activity proxy · ${row[1].toFixed(2)} voltage proxy`;
+    }).join('\n') + '\n\nGraded-rate · no discrete spikes · not biological Hz/mV';
     if (!highlights || !normalized) return;
     const positions = [], colors = [], glowPositions = [], glowColors = [], color = new THREE.Color();
     trace.sample_soma.forEach((p, i) => {
@@ -452,95 +452,30 @@ function animate(now) {
             const fps = state.displayFps || 0;
             const sceneFps = window.flyTaikoScene?.displayFps || 0;
             $('fps').textContent = `Taiko ${fps ? fps.toFixed(0) : '—'} FPS · 3D ${sceneFps ? sceneFps.toFixed(0) : '—'} FPS · target 120 (limited by display/browser).`;
-            $('play').textContent = state.isPlaying ? 'Đang phát' : (time >= game.duration_ms ? 'Phát lại' : 'Phát replay'); lastHUD = now;
+            $('play').textContent = state.isPlaying ? 'Playing' : (time >= game.duration_ms ? 'Replay' : 'Play replay'); lastHUD = now;
         }
     }
     if (brainDirty) drawBrain();
 }
 requestAnimationFrame(animate);
 async function initialize() { try {
-    let requested = new URLSearchParams(location.search).get('dataset');
-    if (!requested) {
-        const response = await fetch(backend('/api/replays'), {cache: 'no-store'});
-        if (!response.ok) throw Error(`Replay library: HTTP ${response.status}`);
-        requested = (await response.json()).replays.find(r => r.status === 'complete')?.dataset;
-        if (!requested) { location.replace('create-replay.html'); return; }
-    }
-    const dataset = requested === 'phase-a' ? 'malecns-taiko-v18-phase-a' :
-        requested === 'playing-god-v19' ? 'playing-god-v19' :
-        requested === 'playing-god-v23' ? 'playing-god-v23' :
-        requested === 'ideoless-v23' ? 'ideoless-v23' :
-        /^user-v(?:23|24|25)-[a-f0-9]{12}$/.test(requested || '') ? requested :
-        requested === 'v19' ? 'malecns-taiko-v19' :
-        requested === 'v18' ? 'malecns-taiko-v18' :
-        requested === 'v17' ? 'malecns-taiko-v17' :
-        requested === 'v16' ? 'malecns-taiko-v16' : 'malecns-taiko';
-    refreshReplayLibrary(dataset).catch(error => { $('library').replaceChildren(new Option(error.message, '')); });
-    manifest = /^user-v(?:23|24|25)-/.test(dataset) ? await waitForUserReplay(dataset) :
-        await json(`demos/${dataset}/manifest.json`);
-    if (dataset !== 'playing-god-v19' && dataset !== 'playing-god-v23' && dataset !== 'ideoless-v23' && !/^user-v(?:23|24|25)-/.test(dataset)) {
-        document.querySelector('h1').textContent = 'IDEALESS IDEOLOGY · CATASTROPHE';
-        $('ideology-sv-link').hidden = false;
-        $('source-links').innerHTML = '<a href="malecns.html?manifest=demos/malecns-phase-a-replays.json">Xem ảnh RGB gốc</a> · <a href="demos/malecns-taiko/manifest.json">Manifest/provenance</a> · <a href="demos/malecns-phase-a-ideology-full.json" download>Replay gốc đầy đủ (155 MB)</a> · <a href="https://male-cns.janelia.org/download/">Nguồn MaleCNS, CC-BY-4.0</a>';
-    }
-    if (dataset === 'playing-god-v19') {
-        document.querySelector('h1').textContent = 'Playing God · Superstition';
-        $('checkpoint-label').textContent = 'V19 · BONUS TRAIN MAP';
-        $('scope-description').textContent = 'Replay offline từ checkpoint v19 trên map bonus đã dùng khi train. Không phải kết quả trên bài chưa từng học. Máy chủ chỉ có chart .osu, chưa có file nhạc.';
-        $('source-links').innerHTML = '<a href="demos/playing-god-v19/manifest.json">Manifest/provenance</a> · <a href="demos/playing-god-v19-replay.json" download>Replay gốc</a>';
-    }
-    if (dataset === 'playing-god-v23') {
-        document.querySelector('h1').textContent = 'Playing God · Superstition';
-        $('checkpoint-label').textContent = 'V23 · PHASE C BEST · TRAIN MAP';
-        $('scope-description').textContent = 'Replay offline nguyên bài từ checkpoint v23 Phase C. Map này nằm trong tập bonus train; không phải bài chưa từng học. Đầu vào thật là RGB 1000×300; máy chủ chưa có file nhạc.';
-        $('source-links').innerHTML = '<a href="demos/playing-god-v23/manifest.json">Manifest/provenance</a> · <a href="demos/playing-god-v23-replay.json" download>Replay gốc</a>';
-    }
-    if (dataset === 'ideoless-v23') {
-        document.querySelector('h1').textContent = 'IDEALESS IDEOLOGY · CATASTROPHE';
-        $('checkpoint-label').textContent = 'V23 · PHASE C BEST · FULL MAP';
-        $('scope-description').textContent = 'Replay offline nguyên bài từ checkpoint v23 Phase C, ảnh đầu vào RGB 1000×300. Phím và judgment là kết quả mô phỏng, không căn theo note; chưa phải điều khiển osu! thật.';
-        $('source-links').innerHTML = '<a href="demos/ideoless-v23/manifest.json">Manifest/provenance</a> · <a href="demos/ideoless-v23-replay.json" download>Replay gốc</a>';
-    }
-    if (/^user-v(?:23|24|25)-/.test(dataset)) {
-        const meta = manifest.replays[0]?.label || 'Map Taiko đã tải lên';
-        document.querySelector('h1').textContent = meta;
-        const modelVersion = dataset.slice(5, 8);
-        $('checkpoint-label').textContent = `${modelVersion.toUpperCase()} · MAP NGƯỜI DÙNG`;
-        $('scope-description').textContent = `Replay offline từ file .osz đã tải lên. Đây là suy luận từ checkpoint ${modelVersion}; không train thêm, không điều khiển osu! thật.`;
-        $('source-links').innerHTML = `<a href="demos/${dataset}/manifest.json">Manifest/provenance</a>`;
-    }
-    if (dataset === 'malecns-taiko-v16') {
-        $('checkpoint-label').textContent = 'V16 · CHECKPOINT ĐƯỢC CHỌN';
-        $('scope-description').textContent = 'Replay offline của chiến dịch v16 trên chart native đã xác minh. Phím, timing và judgment giữ nguyên, không căn hit về note. SV lấy từ chart native; âm thanh lấy từ OSZ cùng bài. Kết quả kiểm tra độc lập ở tệp quality.json.';
-        $('source-links').innerHTML = '<a href="demos/malecns-taiko-v16/manifest.json">Manifest/provenance</a> · <a href="demos/malecns-taiko-v16/quality.json">Kiểm tra chất lượng</a> · <a href="demos/malecns-v16-final-replay.json" download>Replay gốc v16</a> · <a href="https://male-cns.janelia.org/download/">Nguồn MaleCNS, CC-BY-4.0</a>';
-    }
-    if (dataset === 'malecns-taiko-v18') {
-        $('checkpoint-label').textContent = 'V18 · OSU TAIKO SV 16:9';
-        $('scope-description').textContent = 'Replay offline của chiến dịch v18 với SV quy đổi theo vùng cuộn osu!taiko 16:9. Giao diện và khung RGB model nhận được hiển thị riêng; đây chưa phải điều khiển osu! thật.';
-        $('source-links').innerHTML = '<a href="demos/malecns-taiko-v18/manifest.json">Manifest/provenance</a> · <a href="demos/malecns-v18-final-replay.json" download>Replay gốc v18</a> · <a href="https://male-cns.janelia.org/download/">Nguồn MaleCNS, CC-BY-4.0</a>';
-    }
-    if (dataset === 'malecns-taiko-v18-phase-a') {
-        $('checkpoint-label').textContent = 'V18 · PHASE A BEST · EPOCH 9';
-        $('scope-description').textContent = 'Replay toàn bài từ checkpoint Phase A được chọn ở epoch 9, chưa cần chờ đánh giá độc lập cuối chiến dịch. Phím và judgment là kết quả mô phỏng đã ghi; không căn theo note.';
-        $('source-links').innerHTML = '<a href="demos/malecns-taiko-v18-phase-a/manifest.json">Manifest/provenance</a> · <a href="demos/malecns-v18-warmval-phase-a-replay.json" download>Replay Phase A gốc</a> · <a href="https://male-cns.janelia.org/download/">Nguồn MaleCNS, CC-BY-4.0</a>';
-    }
-    if (dataset === 'malecns-taiko-v19') {
-        $('checkpoint-label').textContent = 'V19 · DEFAULT-STYLE INPUT · FOVEATED VIEW';
-        $('scope-description').textContent = 'Replay từ checkpoint v19 được chọn sau khi train lại với ảnh default-style 512×96 và photoreceptor lấy mẫu nhiều tỷ lệ trên vùng x=40…511. Phím và judgment là kết quả mô phỏng đã ghi, không căn theo note.';
-        $('source-links').innerHTML = '<a href="demos/malecns-taiko-v19/manifest.json">Manifest/provenance</a> · <a href="demos/malecns-v19-skin-foveated-replay.json" download>Replay v19 gốc</a> · <a href="https://male-cns.janelia.org/download/">Nguồn MaleCNS, CC-BY-4.0</a>';
-    }
-    $('source-links').querySelectorAll('a[href^="demos/"]').forEach(link => {
-        link.href = backend(link.getAttribute('href'));
-    });
-    manifest.replays.forEach((r, i) => $('examples').add(new Option(r.label, i))); $('examples').disabled = false;
-    anatomy().catch(e => { $('brain').textContent = 'Không tải được giải phẫu: ' + e.message; });
-    bytes(manifest.sample_edges.url).then(async response => {
-        await verify(response, manifest.sample_edges.sha256);
-        const rows = JSON.parse(new TextDecoder().decode(response));
-        if (rows.length !== manifest.sample_edges.count || rows.some(r => !Number.isInteger(r[0]) || r[0] < 0))
-            throw Error('Sai dữ liệu cạnh thần kinh');
-        edgeRows = rows; rebuildEdges();
-    }).catch(e => { $('neural').title = 'Không tải được các cạnh giải phẫu: ' + e.message; });
+    const requested = new URLSearchParams(location.search).get('dataset');
+    const response = await fetch(backend('/api/replays'), {cache:'no-store'});
+    if (!response.ok) throw Error('Replay library unavailable: HTTP '+response.status);
+    const rows=(await response.json()).replays;
+    const dataset=requested || rows.find(r=>r.status==='complete')?.dataset;
+    await refreshReplayLibrary(dataset);
+    if(!dataset) { $('status').textContent='Upload a map to create your first replay.'; document.querySelector('h1').textContent='FlyTaiko'; return; }
+    if(!/^[a-zA-Z0-9-]+$/.test(dataset)) throw Error('Invalid dataset');
+    manifest = /^user-v(?:23|24|25)-/.test(dataset) ? await waitForUserReplay(dataset) : await json('demos/'+dataset+'/manifest.json');
+    document.querySelector('h1').textContent=manifest.replays[0]?.label || 'FlyTaiko';
+    $('checkpoint-label').textContent='RECORDED REPLAY';
+    $('scope-description').textContent='Offline checkpoint inference. Recorded keys and judgments are preserved, not snapped to notes. This does not control the real osu! client.';
+    const link=document.createElement('a'); link.href=backend('demos/'+dataset+'/manifest.json'); link.textContent='Manifest / provenance'; $('source-links').replaceChildren(link);
+    $('examples').replaceChildren(); manifest.replays.forEach((r,i)=>$('examples').add(new Option(r.label,i))); $('examples').disabled=false;
+    anatomy().catch(e=>{$('brain').textContent='Anatomy load failed: '+e.message;});
+    bytes(manifest.sample_edges.url).then(async data=>{await verify(data,manifest.sample_edges.sha256);edgeRows=JSON.parse(new TextDecoder().decode(data));rebuildEdges();}).catch(e=>{$('neural').title=e.message;});
     await load(0);
-} catch (e) { $('status').textContent = 'Lỗi tải demo: ' + e.message; } }
+} catch(e) { $('status').textContent='Demo load failed: '+e.message; } }
+window.addEventListener('replay-created',e=>{ location.href='?dataset='+encodeURIComponent(e.detail); });
 initialize();

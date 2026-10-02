@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi"><head>
+<html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FlyTaiko · Taiko replay + MaleCNS</title>
 <style>
@@ -23,23 +23,27 @@ iframe{display:block;width:100%;height:555px;border:0}#timeline{display:flex;gap
 a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cursor:pointer;color:#bac9df}.tag{display:inline-block;background:#263445;border:1px solid #42566e;border-radius:5px;font-size:12px;padding:3px 8px;margin-right:8px}
 @media(max-width:650px){body{margin:16px auto}h1{font-size:22px}.brain-panel{grid-template-columns:1fr}#timeline{padding:10px}#clock{font-size:12px}#fly-stage{height:340px}}
 </style></head><body>
-<h1>Đang tải replay…</h1>
-<p class="subtle"><span id="checkpoint-label" class="tag">PHASE A · EPOCH 12</span> Giao diện taiko cũ · SV native · D/K = Kat · F/J = Don</p>
-<p><a href="create-replay.html">Upload .osz and create a v25 replay →</a></p>
-<p id="ideology-sv-link" hidden><a href="sv-ideology.html">Mở demo kiểm tra SV mới: tự chơi IDEALESS, không có model/con ruồi →</a></p>
-<p id="phase-a-link" hidden><a href="malecns-taiko.html?dataset=phase-a">Xem replay toàn bài từ checkpoint Phase A tốt nhất →</a></p>
+<h1>Loading replay…</h1>
+<p class="subtle"><span id="checkpoint-label" class="tag">PHASE A · EPOCH 12</span> Recorded Taiko player · SV native · D/K = Kat · F/J = Don</p>
+<section class="panel" id="upload-panel"><h2>Upload → Generate → Watch</h2>
+<p>v25 Phase C · .osz up to 128 MB · Taiko charts under 10 minutes · one GPU job at a time. Upload only files you may share.</p>
+<div class="controls"><input id="upload-file" type="file" accept=".osz"><button id="upload-map">Upload map</button><progress id="upload-progress" max="100" value="0"></progress></div>
+<div class="controls"><label>Difficulty <select id="upload-chart"><option>Upload a map first</option></select></label><label>Mods <select id="upload-mods"><option>NM</option><option>HR</option><option>DT</option><option>DTHR</option></select></label><button id="generate-replay" disabled>Generate replay</button></div>
+<p id="upload-status" role="status">Ready to upload.</p><p id="upload-result"></p></section>
+<p id="ideology-sv-link" hidden></p>
+<p id="phase-a-link" hidden></p>
 <label class="controls">Replay library <select id="library" aria-label="All saved replays" disabled><option>Loading replays…</option></select></label>
 <div class="controls">
 <select id="examples" aria-label="Version or section within this replay" disabled></select>
-<label>Skin <select id="skin" aria-label="Skin Taiko trên web"><option value="default">Default</option></select></label>
-<button id="play" disabled>Phát replay</button><button id="pause" disabled>Tạm dừng</button><button id="restart" disabled>Về đầu</button>
-<label>Âm lượng <input id="volume" type="range" min="0" max="1" step=".01" value=".65" aria-label="Âm lượng"></label>
+<label>Skin <select id="skin" aria-label="Taiko skin"><option value="default">Default</option></select></label>
+<button id="play" disabled>Play replay</button><button id="pause" disabled>Pause</button><button id="restart" disabled>Restart</button>
+<label>Music volume <input id="volume" type="range" min="0" max="1" step=".01" value=".65" aria-label="Music volume"></label>
 <label>Hitsound <input id="hit-volume" type="range" min="0" max="1" step=".01" value=".55" aria-label="Hitsound volume"></label>
 </div>
-<p id="status" role="status">Đang tải danh sách replay…</p><p id="metrics" class="subtle"></p>
+<p id="status" role="status">Loading replay library…</p><p id="metrics" class="subtle"></p>
 <div class="panel">
 <iframe id="viewer" src="taiko_viewer.html" title="Taiko replay player"></iframe>
-<div id="timeline"><input id="seek" aria-label="Thời gian replay" type="range" min="0" max="1" step="1" value="0" disabled><span id="clock">0:00 / 0:00</span></div>
+<div id="timeline"><input id="seek" aria-label="Replay time" type="range" min="0" max="1" step="1" value="0" disabled><span id="clock">0:00 / 0:00</span></div>
 </div>
 <section class="fly-panel panel"><h2>Fly at the Taiko screen</h2>
 <div id="fly-stage" aria-label="3D fly at a Taiko screen with D F J K keys">
@@ -51,25 +55,26 @@ a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cur
 <p id="fly-status" class="subtle">Loading Flybody 3D…</p>
 <p class="subtle">Drag to rotate · Scroll to zoom · Keys and neuron activity come from the recorded replay.</p></section>
 <p id="fps" class="subtle">Taiko — FPS · 3D — FPS · target 120 (limited by display/browser).</p>
-<section class="input-panel panel"><h2>Ảnh mà model thực sự thấy</h2>
-<p class="subtle">Frame RGB được ghi trực tiếp lúc suy luận, không phải ảnh chụp giao diện taiko bên trên. Kích thước thực hiện bên dưới; v23 dùng 1000×300, bản cũ dùng 512×96. Đổi skin web không đổi ảnh này, cache hay kết quả model. Replay lưu một frame khoảng mỗi 48 ms; khung hình được giữ nguyên giữa các mốc ghi.</p>
-<canvas id="model-input" width="512" height="96" aria-label="Ảnh RGB đầu vào model đã ghi"></canvas>
-<p class="retina-label">Vùng thị giác lấy mẫu</p><canvas id="retina-input" width="137" height="53" aria-label="Vùng RGB được photoreceptor lấy mẫu"></canvas>
-<p class="subtle">Khung dưới là phần cắt nguyên pixel từ ảnh trên; các photoreceptor lấy mẫu theo vị trí riêng và nội suy song tuyến tính trong vùng này, không đọc mọi pixel của ảnh.</p>
-<p id="input-status" class="subtle">Đang tải ảnh đầu vào…</p></section>
+<section class="input-panel panel"><h2>Recorded model input</h2>
+<p class="subtle">RGB frames recorded during inference. Changing the web skin does not change model inputs or predictions. Recorded frames are held between samples.</p>
+<canvas id="model-input" width="512" height="96" aria-label="Recorded RGB model input"></canvas>
+<p class="retina-label">Sampled visual field</p><canvas id="retina-input" width="137" height="53" aria-label="RGB photoreceptor sampling region"></canvas>
+<p class="subtle">The lower image is a pixel crop. Photoreceptors sample selected locations using bilinear interpolation, not every pixel.</p>
+<button id="load-inputs" disabled>Load recorded model inputs</button><p id="input-status" class="subtle">Load recorded inputs on demand.</p></section>
 <div class="brain-panel panel">
-<section><h2>MaleCNS · soma theo ID thật</h2><div id="brain" aria-label="Vị trí soma và hoạt động neuron đã ghi"></div>
-<p class="subtle">Kéo để xoay. Đèn sáng theo thay đổi hoạt động <em>đã ghi</em> ở neuron mẫu. Camera xoay và chấm sáng chạy dọc kết nối đo được chỉ là hiệu ứng minh họa — không phải neuron di chuyển hay tín hiệu truyền được đo trực tiếp.</p></section>
-<section><h2>Hoạt động neuron đã ghi</h2><p id="neural">Đang tải trace…</p><pre id="groups"></pre></section>
+<section><h2>MaleCNS · anatomical soma IDs</h2><div id="brain" aria-label="Soma positions and recorded neuron activity"></div>
+<p class="subtle">Drag to rotate. Brightness reflects recorded activity; traveling connection lights are illustrative, not measured signal propagation.</p></section>
+<section><h2>Recorded neuron activity</h2><p id="neural">Loading trace…</p><pre id="groups"></pre></section>
 </div>
-<details><summary>Phạm vi mô phỏng và dữ liệu</summary>
-<p id="scope-description">Đang tải thông tin nguồn replay…</p>
-<p>165.122 neuron, 25.563.197 kết nối đo được; động lực graded-rate và bộ đọc phím là giả định mô hình, không phải mô phỏng sinh học đã kiểm chứng. Activity/voltage là proxy, không phải Hz/mV sinh học; mô hình không sinh spike rời rạc. Trace ghi khoảng mỗi 48 ms, không được tạo thêm trạng thái để giả 120 FPS. 120 FPS chỉ dành cho chuyển động và hiển thị.</p>
-<p>Giao diện taiko phía trên là lớp trình bày; khung RGB là ảnh được ghi lúc model chạy. Đây chưa phải điều khiển osu! thật. Một replay không chứng minh tổng quát hóa.</p>
-<p id="source-links">Đang tải nguồn dữ liệu…</p>
-<p>Flybody mesh: <a href="data/flybody/NOTICE.md">TuragaLab/flybody, Apache-2.0</a>. Cảnh 3D điều chỉnh từ <a href="https://github.com/cobanov/fly-connectome-template">fly-connectome-template</a> của <a href="https://github.com/cobanov">Mert Cobanov</a>.</p>
+<details><summary>Simulation scope and provenance</summary>
+<p id="scope-description">Loading replay provenance…</p>
+<p>165,122 neurons and 25,563,197 measured connections. Graded-rate dynamics and key readout are modeling assumptions, not validated biological simulation. Activity and voltage are proxies, not biological Hz/mV. Display targets 120 FPS; recorded neural states are not interpolated.</p>
+<p>The Taiko player is a presentation layer. This does not control the real osu! client; one replay does not demonstrate generalization.</p>
+<p id="source-links">Loading sources…</p>
+<p>Flybody mesh: <a href="data/flybody/NOTICE.md">TuragaLab/flybody, Apache-2.0</a>. 3D scene adapted from <a href="https://github.com/cobanov/fly-connectome-template">fly-connectome-template</a> by <a href="https://github.com/cobanov">Mert Cobanov</a>.</p>
 </details>
 <script src="runtime-config.js"></script>
+<script type="module" src="replay_upload.js"></script>
 <script type="module" src="malecns_taiko_demo.js?v=20261002-v25-public"></script>
 <script type="module" src="fly_taiko_scene.js?v=kat-lean-1"></script>
 </body></html>

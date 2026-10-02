@@ -179,7 +179,7 @@ function recordedForces() {
 // Locate all four tarsi from actual vertices, not guessed desktop coordinates.
 function footMean(vertices, predicate) {
     const selected = vertices.filter(predicate).sort((a, b) => a.y - b.y);
-    if (!selected.length) throw Error('Không tìm được đầu chân Flybody');
+    if (!selected.length) throw Error('Flybody foot endpoints not found');
     const lowest = selected.slice(0, Math.max(4, Math.ceil(selected.length * .1)));
     return lowest.reduce((mean, p) => mean.add(p), new THREE.Vector3()).divideScalar(lowest.length);
 }
@@ -297,10 +297,10 @@ async function start() {
     const [metaResponse, binaryResponse] = await Promise.all([
         fetch(MODEL_ROOT + 'model.json'), fetch(MODEL_ROOT + 'model.bin'),
     ]);
-    if (!metaResponse.ok || !binaryResponse.ok) throw Error('Không tải được Flybody mesh');
+    if (!metaResponse.ok || !binaryResponse.ok) throw Error('Flybody mesh download failed');
     const meta = await metaResponse.json(), binary = await binaryResponse.arrayBuffer();
     if (meta.version !== 1 || !Array.isArray(meta.parts) || binary.byteLength !== 1711800)
-        throw Error('Flybody mesh sai cấu trúc');
+        throw Error('Invalid Flybody mesh layout');
     const vertices = {body: [], front_left: [], front_right: []};
     for (const part of meta.parts) {
         const geometry = new THREE.BufferGeometry();
@@ -342,7 +342,7 @@ async function start() {
     const katRollSign = Math.sign(footWorld.D.x - footWorld.K.x) || -1;
     let bodyRoll = 0, lastPoseTime = null;
     const radius = bounds.getBoundingSphere(new THREE.Sphere()).radius;
-    if (radius < .04 || radius > 2) throw Error('Flybody mesh có kích thước bất thường');
+    if (radius < .04 || radius > 2) throw Error('Unexpected Flybody mesh dimensions');
     status.textContent = 'Flybody 3D · drag to rotate';
 
     const resize = () => {

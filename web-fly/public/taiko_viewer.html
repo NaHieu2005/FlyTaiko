@@ -241,14 +241,14 @@
 
     <div class="controls" style="display: none;">
         <div class="file-upload" id="diff-container" style="display: none;">
-            <label>1.5. Chọn Độ khó (Diff)</label>
+            <label>1.5. Select difficulty</label>
             <select id="diff-select"></select>
         </div>
         <div class="file-upload">
-            <label>2. Chọn file <b>replay.json</b> (Não ruồi)</label>
+            <label>2. Select file <b>replay.json</b> (Fly brain)</label>
             <input type="file" id="replay-file" accept=".json">
         </div>
-        <button id="start-btn" class="btn" disabled>BẮT ĐẦU CHƠI</button>
+        <button id="start-btn" class="btn" disabled>PLAY</button>
     </div>
 
     <div id="game-container">
@@ -418,7 +418,7 @@
             // Tìm TẤT CẢ các file .osu trong file .osz
             let osuFileNames = Object.keys(zipCache.files).filter(n => n.endsWith('.osu'));
             if (osuFileNames.length === 0) {
-                alert("Không tìm thấy file .osu nào trong .osz này!");
+                alert("No .osu chart found in this .osz!");
                 return;
             }
 
@@ -667,7 +667,7 @@
             } else {
                 isPlaying = false;
                 startBtn.disabled = false;
-                startBtn.textContent = "CHƠI LẠI";
+                startBtn.textContent = "REPLAY";
                 replayIndex = 0;
             }
         }

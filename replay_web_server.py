@@ -1,6 +1,7 @@
 """Static FlyTaiko site and bounded OSZ replay jobs on a separate GPU host."""
 import argparse
 import hashlib
+import gzip
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -17,6 +18,7 @@ from zipfile import ZipFile, BadZipFile
 from extract_beatmaps import extract_beatmap_data
 from neural_campaign import atomic_json
 from taiko.parser import parse_osu_text
+from replay_store import library, reconcile, save_job
 
 
 ROOT = Path(__file__).resolve().parent
@@ -125,6 +127,8 @@ class Handler(SimpleHTTPRequestHandler):
         return None
 
     def end_headers(self):
+        if urlsplit(self.path).path.startswith('/demos/'):
+            self.send_header('Cache-Control', 'public, max-age=3600')
         origin = self.allowed_origin()
         if origin:
             self.send_header('Access-Control-Allow-Origin', origin)
@@ -152,7 +156,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/api/replays':
-            self.respond(200, replay_library())
+            self.respond(200, library())
             return
         match = re.fullmatch(r'/api/replays/([a-f0-9]{12})', self.path)
         if match:
@@ -160,6 +164,25 @@ class Handler(SimpleHTTPRequestHandler):
                 self.respond(200, job_status(match.group(1)))
             except FileNotFoundError:
                 self.respond(404, {'error': 'Job not found'})
+            return
+        # Compress large trace/gameplay JSON without buffering it on every request.
+        path = Path(self.translate_path(urlsplit(self.path).path))
+        if path.suffix == '.json' and path.is_file() and path.stat().st_size > 4096 and 'gzip' in self.headers.get('Accept-Encoding', ''):
+            compressed = path.with_suffix(path.suffix + '.gz')
+            with LOCK:
+                if not compressed.exists() or compressed.stat().st_mtime < path.stat().st_mtime:
+                    temporary = compressed.with_suffix('.gz.tmp')
+                    with path.open('rb') as source, gzip.open(temporary, 'wb', compresslevel=5) as target:
+                        shutil.copyfileobj(source, target)
+                    temporary.replace(compressed)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Vary', 'Accept-Encoding')
+            self.send_header('Content-Length', str(compressed.stat().st_size))
+            self.end_headers()
+            with compressed.open('rb') as source:
+                shutil.copyfileobj(source, self.wfile)
             return
         return super().do_GET()
 
@@ -220,6 +243,7 @@ class Handler(SimpleHTTPRequestHandler):
                     atomic_json(job_dir / 'status.json', {'status': 'queued', 'job_id': job_id,
                              'chart': upload['charts'][chart_index], 'upload_id': upload_id,
                              'mods': mods, 'model': model})
+                    save_job(json.loads((job_dir / 'status.json').read_text()))
                     log = (job_dir / 'worker.log').open('w')
                     command = [sys.executable, '-u', 'replay_osz_worker.py',
                                '--upload', upload_id, '--chart', str(chart_index), '--job', job_id,
@@ -244,6 +268,7 @@ def main():
     parser.add_argument('--bind', default='0.0.0.0')
     args = parser.parse_args()
     JOBS.mkdir(parents=True, exist_ok=True)
+    reconcile(PUBLIC, JOBS)
     server = ThreadingHTTPServer((args.bind, args.port), Handler)
     print(f'FlyTaiko replay server listening on {args.bind}:{args.port}', flush=True)
     server.serve_forever()

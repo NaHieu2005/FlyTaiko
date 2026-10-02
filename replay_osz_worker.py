@@ -17,6 +17,7 @@ from neural_system import seed_all
 from taiko.parser import parse_osu_text
 from replay_models import load_v25
 from warm_validation import WarmValidationEngine
+from replay_store import save_job
 
 
 BASE = Path('runs/user_replays')
@@ -57,6 +58,7 @@ def update(folder, **fields):
     old = json.loads(path.read_text())
     old.update(fields)
     atomic_json(path, old)
+    save_job(old)
 
 
 def audio_member(osu_text, chart_name, names):
