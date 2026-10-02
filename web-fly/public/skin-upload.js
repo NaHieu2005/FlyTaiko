@@ -1,4 +1,7 @@
 const $=id=>document.getElementById(id);
+const skinKey=name=>name.normalize('NFKC').trim().toLowerCase();
+let importing=false;
+async function savedSkins(db){return new Promise((resolve,reject)=>{const r=db.transaction('skins').objectStore('skins').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 const images={barLeft:'taiko-bar-left',drumInner:'taiko-drum-inner',drumOuter:'taiko-drum-outer',barRight:'taiko-bar-right',barGlow:'taiko-bar-right-glow',hit:'taikohitcircle',hitOverlay:'taikohitcircleoverlay',hitOverlay1:'taikohitcircleoverlay-1',big:'taikobigcircle',bigOverlay:'taikobigcircleoverlay',bigOverlay1:'taikobigcircleoverlay-1',rollMiddle:'taiko-roll-middle',rollEnd:'taiko-roll-end',spinner:'spinner-circle'};
 const sounds={don:'taiko-drum-hitnormal',kat:'taiko-drum-hitclap',finish:'taiko-drum-hitfinish',whistle:'taiko-drum-hitwhistle',roll:'taiko-drum-hitnormal',spinner:'spinnerbonus',miss:'combobreak'};
 const database=new Promise((resolve,reject)=>{const r=indexedDB.open('flytaiko-skins',1);r.onupgradeneeded=()=>r.result.createObjectStore('skins',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});database.catch(()=>{});
@@ -9,6 +12,7 @@ async function install(record){
  if(![...$('skin').options].some(o=>o.value===record.id))$('skin').add(new Option(record.name,record.id));
 }
 async function importSkin(files,archive){
+ if(importing)return;importing=true;
  $('skin-status').textContent='Reading skin…';
  try{
   const entries=[];
@@ -22,10 +26,14 @@ async function importSkin(files,archive){
    assets.push({type,key,bytes,mime:{png:'image/png',ogg:'audio/ogg',wav:'audio/wav',mp3:'audio/mpeg'}[e.name.split('.').pop()]});
   }
   if(!assets.some(a=>a.key==='hit'))throw Error('No Taiko hitcircle found');
-  const record={id:'custom-'+crypto.randomUUID(),name:archive?archive.name.replace(/\.(osk|zip)$/i,''):(files[0]?.webkitRelativePath.split('/')[0]||'Custom skin'),assets};
-  await install(record);const db=await database;await new Promise((resolve,reject)=>{const tx=db.transaction('skins','readwrite');tx.objectStore('skins').put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+  const name=archive?archive.name.replace(/\.(osk|zip)$/i,''):(files[0]?.webkitRelativePath.split('/')[0]||'Custom skin');
+  const db=await database,duplicates=(await savedSkins(db)).filter(r=>skinKey(r.name)===skinKey(name));
+  const record={id:duplicates[0]?.id||'custom-'+crypto.randomUUID(),name,assets};
+  await install(record);await new Promise((resolve,reject)=>{const tx=db.transaction('skins','readwrite'),store=tx.objectStore('skins');for(const old of duplicates)store.delete(old.id);store.put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Skin save aborted'));});
+  for(const option of [...$('skin').options])if(option.value!==record.id && duplicates.some(old=>old.id===option.value)){(await player()).removeRecordedSkin(option.value);option.remove();localStorage.removeItem('flytaiko-hit-volume-'+option.value);}
+  [...$('skin').options].find(o=>o.value===record.id).textContent=name;
   $('skin').value=record.id;await $('skin').onchange();$('skin-status').textContent=`${record.name}: ${assets.length} assets saved in this browser.`;
- }catch(e){$('skin-status').textContent='Skin import failed: '+e.message;}
+ }catch(e){$('skin-status').textContent='Skin import failed: '+e.message;}finally{importing=false;$('skin-archive').value='';$('skin-folder').value='';}
 }
 $('skin-archive').onchange=e=>{if(e.target.files[0])importSkin(null,e.target.files[0]);};
 $('skin-folder').onchange=e=>{if(e.target.files.length)importSkin(e.target.files,null);};

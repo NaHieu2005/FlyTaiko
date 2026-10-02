@@ -21,6 +21,7 @@
     let skinSounds = null;
     let mapBackground = null, backgroundBrightness = .35;
     const customSkins = new Map();
+    window.removeRecordedSkin = name => customSkins.delete(name);
     window.setRecordedBackground = async url => {
         const requested = url;
         window.recordedBackgroundURL = requested;

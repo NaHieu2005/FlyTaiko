@@ -74,7 +74,9 @@ individual asset limit 8 MB. Clearing website data removes imported skins.
 
 The player and 3D monitor use 16:9 geometry. Imported drum inner/outer halves
 show independent D/F/J/K inputs beside the judgment target. Re-import older
-saved skins to include newly supported assets. Note overlays support static
+saved skins to include newly supported assets. Re-importing the same name replaces the existing saved
+skin and removes duplicate entries (case-insensitive, ignoring edge spaces).
+An invalid import does not delete the saved skin. Note overlays support static
 and two-frame variants. Kiai intervals come from native TimingPoints; lane glow
 uses the skin's glow asset when present. Optional finish/whistle, combo-break
 and spinner-completion samples are supported alongside Don/Kat and roll hits.
