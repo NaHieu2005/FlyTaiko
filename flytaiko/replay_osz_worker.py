@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
@@ -146,6 +147,9 @@ def main():
                                                 'chart_member': chart['member'],
                                                 'audio_member': audio_name}
                 atomic_json(manifest_path, manifest)
+        if os.environ.get('FLYTAIKO_CLOUD_URL'):
+            update(folder, status='publishing_cloud', metrics=metrics, dataset=dataset)
+            subprocess.run(['node', 'web-fly/scripts/publish-replay.mjs', dataset, str(destination.resolve())], check=True)
         update(folder, status='complete', metrics=metrics, dataset=dataset,
                url=f'/malecns-taiko.html?dataset={dataset}')
         print(json.dumps({'event': 'user_replay_complete', 'job': args.job,

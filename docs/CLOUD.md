@@ -1,8 +1,11 @@
 # Independence from the workstation
 
-The current website still uses the workstation API via a temporary tunnel.
-Making the GitHub repository public does not move model execution or replay
-storage to GitHub or Vercel. No paid resources have been provisioned.
+> Public playback is now independent through Neon and Vercel Blob. Only owner
+> generation still uses the workstation. See [current setup](OWNER_CLOUD.md).
+> The GPU-host migration below remains an optional future step.
+
+The current generation API uses the workstation via a temporary tunnel.
+Moving that GPU execution remains separate from the implemented cloud storage.
 
 Vercel does not provide native GPU execution for this CUDA workload. See
 [Vercel's serverless GPU explanation](https://vercel.com/i/what-is-serverless-gpu).
@@ -51,8 +54,8 @@ the Compose plugin. Local package imports and CUDA smoke inference passed.
 
 ## Playback-only alternative
 
-Existing immutable demos can be served from cloud object storage/CDN without
-any GPU. This would make viewing independent but cannot generate new replays.
+Existing immutable demos are served from Vercel Blob without a GPU. This makes
+viewing independent but cannot generate new replays by itself.
 Audio and large RGB/trace bundles are separate assets; publishing only the
 manifest is insufficient. Publish only assets you may redistribute. Hosting
 them in Git source is not a substitute for durable upload storage.

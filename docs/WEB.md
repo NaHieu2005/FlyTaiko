@@ -1,5 +1,9 @@
 # All-in-one web
 
+> For the current deployment, follow [owner uploads and cloud storage](OWNER_CLOUD.md).
+> Public playback uses Neon and Vercel Blob. Anonymous upload is disabled.
+> The local-service details below describe workstation recovery storage.
+
 From the repository root, with the GPU environment and trusted v25 model installed:
 
 ```bash
@@ -15,7 +19,7 @@ stop generation; reopening restores the pending job.
 
 Limits: 128 MB uploads, charts under ten minutes, one GPU job at a time.
 The service also applies a global budget of 12 uploads per 15 minutes and a
-120-second socket inactivity timeout. These are basic safeguards, not user authentication.
+120-second socket inactivity timeout. Owner authentication is additionally required.
 Upload only maps and music you have permission to share.
 
 ## Database and files
@@ -61,14 +65,14 @@ change on restart and have no production uptime guarantee. Replace it with a
 named tunnel or a stable HTTPS GPU host before advertising a permanent service.
 When the backend URL changes, update `FLYTAIKO_BACKEND_URL` in Vercel and redeploy.
 
-The public library uses a single full-map replay selector. Published manifests
+The public cloud library uses a single full-map replay selector. Published manifests
 load independently of historical job-status files. Internal smoke recordings
 are hidden. Retired pre-v25 demos are archived outside the public directory;
 NOCTASTRA versions are retained. SQLite tombstones prevent retired entries
 from reappearing when legacy job statuses are imported at startup.
 
 Git auto-deploy is not connected yet: grant the Vercel GitHub App access to the
-private `NaHieu2005/FlyTaiko` repository and set the Git project root to `web-fly`.
+public `NaHieu2005/FlyTaiko` repository and set the Git project root to `web-fly`.
 The current deployment was made from that directory using Vercel CLI. Until Git
 is connected, deploy from `web-fly` using `vercel deploy --prod --scope nahieu2005`.
 Keep deployment protection for previews; the production alias is publicly readable.

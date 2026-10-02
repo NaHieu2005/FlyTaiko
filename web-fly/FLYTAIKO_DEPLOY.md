@@ -1,5 +1,9 @@
 # FlyTaiko public release
 
+> Follow [current owner/cloud setup](../docs/OWNER_CLOUD.md). Vercel now also
+> serves a Neon-backed catalogue API. Published assets use Blob; the older
+> static-client notes below describe the previous deployment.
+
 The Vercel site is a static client. It does not run MaleCNS inference, store
 uploads, or publish model weights. GPU inference and generated demo files are
 served by `python -m flytaiko.replay_web_server` on a separate, persistent GPU host.

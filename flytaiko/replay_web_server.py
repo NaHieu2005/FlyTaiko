@@ -21,6 +21,7 @@ from flytaiko.extract_beatmaps import extract_beatmap_data
 from flytaiko.neural_campaign import atomic_json
 from taiko.parser import parse_osu_text
 from flytaiko.replay_store import library, reconcile, save_job
+from flytaiko.owner_auth import valid_token
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -160,7 +161,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         self.send_response(204)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.send_header('Access-Control-Max-Age', '600')
         self.end_headers()
 
@@ -179,6 +180,8 @@ class Handler(SimpleHTTPRequestHandler):
             return
         match = re.fullmatch(r'/api/replays/([a-f0-9]{12})', self.path)
         if match:
+            if not valid_token(self.headers.get('Authorization', '').removeprefix('Bearer ')):
+                return self.respond(401, {'error': 'Owner authentication required'})
             try:
                 self.respond(200, job_status(match.group(1)))
             except FileNotFoundError:
@@ -207,6 +210,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            if not valid_token(self.headers.get('Authorization', '').removeprefix('Bearer ')):
+                return self.respond(401, {'error': 'Owner authentication required'})
             if self.headers.get('Origin') and not self.allowed_origin():
                 return self.respond(403, {'error': 'Origin not allowed'})
             length = int(self.headers.get('Content-Length', '-1'))

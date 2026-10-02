@@ -21,12 +21,12 @@ for (const name of [
     'taiko_viewer.html', 'malecns_taiko_demo.js',
     'fly_taiko_scene.js', 'recorded_taiko_player.js', 'replay_upload.js',
     'TEMPLATE-LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
-    'replay-app.css',
+    'replay-app.css', 'owner-auth.js',
 ]) await cp(join(source, name), join(output, name));
 for (const directory of ['vendor', 'data/flybody', 'licenses'])
     await cp(join(source, directory), join(output, directory), {recursive: true});
 await writeFile(join(output, 'runtime-config.js'),
-                `window.FLYTAIKO_BACKEND_URL = ${JSON.stringify(backend)};\n`);
+                `window.FLYTAIKO_BACKEND_URL = ${JSON.stringify(backend)};\nwindow.FLYTAIKO_CLOUD_MODE = true;\nwindow.FLYTAIKO_ASSET_ORIGIN = ${JSON.stringify(process.env.FLYTAIKO_ASSET_ORIGIN||'')};\n`);
 
 // The personal osu! skin is not redistributed in the public package.
 const playerPath = join(output, 'malecns-taiko.html');

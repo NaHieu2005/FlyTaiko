@@ -1,5 +1,13 @@
 # FlyTaiko
 
+## Current public deployment
+
+Public playback at https://flytaiko.vercel.app/ now uses Neon Postgres and
+Vercel Blob, independently of the workstation. Only the owner can upload and
+generate replays, using **Owner sign in**. See [current setup and workflow](docs/OWNER_CLOUD.md);
+the GPU backend is needed only for generation. Older local-service notes below
+describe workstation recovery storage, not the public playback architecture.
+
 Taiko replay inference with measured MaleCNS connectivity, a causal sensory
 memory policy, and a browser player with recorded neural activity and a 3D fly.
 The selected release model is **v25 Phase C, epoch 4**. Validation improves
@@ -27,10 +35,9 @@ caches, uploaded archives, and generated demos are supplied separately.
 .venv/bin/python -m flytaiko.replay_web_server --bind 127.0.0.1 --port 8000
 ```
 
-Open `http://localhost:8000/`, upload an `.osz`, choose a Taiko
-difficulty and NM/HR/DT/DTHR, then create the replay. Jobs run asynchronously
-and the finished demo appears in the replay library. Recorded metrics, input
-images and neuron traces are shown with the original recorded key timing.
+Open `http://localhost:8000/` for local playback. For owner uploads and cloud
+publication, use the authenticated public portal and worker environment in
+[OWNER_CLOUD.md](docs/OWNER_CLOUD.md).
 
 ## Public website on Vercel
 
@@ -38,15 +45,12 @@ Import this repository into Vercel with Root Directory `web-fly`. Set
 `FLYTAIKO_BACKEND_URL` to your GPU service's HTTPS origin. The bundled
 `vercel.json` builds a static package of approximately 4 MB. On the GPU host,
 set `FLYTAIKO_ALLOWED_ORIGINS` to the frontend origin; multiple origins can be
-comma-separated. Uploads and demo data travel directly to the GPU service.
+comma-separated. Owner uploads travel to the GPU; published files load from Blob.
 See [deployment instructions](web-fly/FLYTAIKO_DEPLOY.md).
 
-The GPU backend must stay online to generate replays. The Vercel site serves
-the frontend; it does not execute CUDA inference.
-Making this repository public does not change that requirement. To remove
-workstation dependence, move runtime and storage to an independent GPU cloud
-host. A container recipe and migration checklist are in [CLOUD.md](docs/CLOUD.md);
-no paid cloud resources have been provisioned.
+The GPU backend must stay online to generate replays, but not to view published
+ones. Vercel does not execute CUDA inference. A future independent GPU-host
+container recipe is in [CLOUD.md](docs/CLOUD.md).
 
 ## Source layout
 

@@ -23,11 +23,11 @@ iframe{display:block;width:100%;height:555px;border:0}#timeline{display:flex;gap
 a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cursor:pointer;color:#bac9df}.tag{display:inline-block;background:#263445;border:1px solid #42566e;border-radius:5px;font-size:12px;padding:3px 8px;margin-right:8px}
 @media(max-width:650px){body{margin:16px auto}h1{font-size:22px}.brain-panel{grid-template-columns:1fr}#timeline{padding:10px}#clock{font-size:12px}#fly-stage{height:340px}}
 </style><link rel="stylesheet" href="replay-app.css?v=20261002-ui2"></head><body>
-<header class="app-header"><a class="brand" href="malecns-taiko.html"><span class="brand-mark">FT</span><span>FlyTaiko<small>NEURAL REPLAY STUDIO</small></span></a><nav><a href="#workspace">Replay library</a><a href="#upload-panel" id="open-upload">+ Create replay</a></nav></header>
+<header class="app-header"><a class="brand" href="malecns-taiko.html"><span class="brand-mark">FT</span><span>FlyTaiko<small>NEURAL REPLAY STUDIO</small></span></a><nav><a href="#workspace">Replay library</a><a href="#upload-panel" id="open-upload" hidden>+ Create replay</a><button id="owner-action">Owner sign in</button></nav></header>
 <div class="page-heading"><p class="eyebrow">TAIKO · MALECNS · V25</p>
 <h1>Loading replay…</h1>
 <p class="subtle"><span id="checkpoint-label" class="tag">V25 · PHASE C</span> Native SV <span class="separator">/</span> D · K = Kat <span class="separator">/</span> F · J = Don</p></div>
-<details class="panel" id="upload-panel"><summary><span>Create a replay<small>Upload an .osz beatmap and run the neural controller</small></span><span class="upload-toggle">+</span></summary><div class="upload-content">
+<details class="panel" id="upload-panel" hidden><summary><span>Create a replay<small>Owner only · upload an .osz beatmap and run the neural controller</small></span><span class="upload-toggle">+</span></summary><div class="upload-content">
 <p class="subtle">v25 Phase C · Up to 128 MB · Under 10 minutes · One GPU job at a time. Upload only files you may share.</p>
 <div class="controls"><input id="upload-file" type="file" accept=".osz"><button id="upload-map">Upload map</button><progress id="upload-progress" max="100" value="0"></progress></div>
 <div class="controls"><label>Difficulty <select id="upload-chart"><option>Upload a map first</option></select></label><label>Mods <select id="upload-mods"><option>NM</option><option>HR</option><option>DT</option><option>DTHR</option></select></label><button id="generate-replay" disabled>Generate replay</button></div>
@@ -74,7 +74,9 @@ a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cur
 <p>Flybody mesh: <a href="data/flybody/NOTICE.md">TuragaLab/flybody, Apache-2.0</a>. 3D scene adapted from <a href="https://github.com/cobanov/fly-connectome-template">fly-connectome-template</a> by <a href="https://github.com/cobanov">Mert Cobanov</a>.</p>
 </details>
 <footer class="app-footer"><span>FlyTaiko · Experimental neural Taiko controller</span><a href="https://github.com/NaHieu2005/FlyTaiko">GitHub ↗</a></footer>
+<dialog id="owner-dialog"><form id="owner-form"><h2>Owner sign in</h2><p class="subtle">Only the owner can upload maps and generate replays.</p><label>Password<input id="owner-password" type="password" autocomplete="current-password" required maxlength="256"></label><p id="owner-error" role="alert"></p><div class="controls"><button id="owner-submit" class="primary" type="submit">Sign in</button><button id="owner-cancel" type="button">Cancel</button></div></form></dialog>
 <script src="runtime-config.js"></script>
+<script type="module" src="owner-auth.js"></script>
 <script type="module" src="replay_upload.js"></script>
 <script type="module" src="malecns_taiko_demo.js?v=20261002-ui2"></script>
 <script type="module" src="fly_taiko_scene.js?v=kat-lean-1"></script>

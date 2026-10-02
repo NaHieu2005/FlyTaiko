@@ -3,6 +3,7 @@ import * as THREE from './vendor/three.module.js';
 const $ = id => document.getElementById(id), viewer = $('viewer');
 const backend = path => window.FLYTAIKO_BACKEND_URL ?
     new URL(path.replace(/^\/+/, ''), window.FLYTAIKO_BACKEND_URL.replace(/\/+$/, '') + '/').href : path;
+const libraryURL=()=>window.FLYTAIKO_CLOUD_MODE?'/api/replays?selected='+encodeURIComponent(new URLSearchParams(location.search).get('dataset')||''):backend('/api/replays');
 let manifest, game, trace, values, shown = -1, version = 0, aborter;
 let observationBytes, observationPaint = -1;
 let audioPromise, audioStatus = 'Downloading music…', audioPendingPlayback = false;
@@ -42,6 +43,11 @@ const ready = new Promise((resolve, reject) => {
     }, {once: true});
 });
 function safePath(path) {
+    if(typeof path==='string'&&path.startsWith('https://')){
+        const url=new URL(path);
+        if(url.origin!==window.FLYTAIKO_ASSET_ORIGIN||url.username||url.password||url.search||url.hash||!/^\/assets\/[a-f0-9]{64}\.[a-z0-9]+$/.test(url.pathname))throw Error('Untrusted cloud asset');
+        return path;
+    }
     if (!/^demos\/(?:malecns-taiko(?:-v1[6789](?:-phase-a)?)?|playing-god-v(?:19|23)|ideoless-v23|user-v(?:23|24|25)-[a-f0-9]{12})\/[a-zA-Z0-9_.-]+$/.test(path)) throw Error('Invalid demo path');
     return path;
 }
@@ -75,7 +81,7 @@ async function bytes(path, signal, progress) {
 }
 async function json(path, signal) { return JSON.parse(new TextDecoder().decode(await bytes(path, signal))); }
 async function refreshReplayLibrary(selected) {
-    const response = await fetch(backend('/api/replays'), {cache: 'no-store'});
+    const response = await fetch(libraryURL(), {cache: 'no-store'});
     if (!response.ok) throw Error(`Replay library: HTTP ${response.status}`);
     const entries = (await response.json()).replays;
     const picker = $('library');
@@ -227,7 +233,16 @@ async function load(index) {
     $('status').textContent = 'Loading replay and recorded trace…';
     const item = manifest.replays[index];
     try {
-        const [newGame, newTrace] = await Promise.all([json(item.gameplay_url, signal), json(item.trace_url, signal)]);
+        const newGame=await json(item.gameplay_url, signal);
+        if(mine!==version)return;
+        game=newGame;trace=null;values=null;
+        w.loadRecordedReplay(game,null);w.setVolume(Number($('volume').value));
+        $('seek').max=game.duration_ms;$('seek').value=0;renderMetrics(game.metrics);
+        $('clock').textContent=`0:00 / ${timeLabel(game.duration_ms)}`;
+        for(const id of ['play','pause','restart','seek'])$(id).disabled=false;
+        loadComplete=true;window.taikoDemo={game,trace:null,values:null,ready:true};
+        if(manifest.audio_url)audio().catch(error=>{if(mine===version)$('status').textContent='Music download failed: '+error.message;});
+        const newTrace=await json(item.trace_url,signal);
         if (mine !== version) return;
         $('status').textContent = 'Loading neuron activity…';
         const binary = await bytes(newTrace.data_url, signal, (loaded, total) => {
@@ -255,8 +270,7 @@ async function load(index) {
             }
         }
         rebuildEdges();
-        w.loadRecordedReplay(game, null); w.setVolume(Number($('volume').value));
-        $('seek').max = game.duration_ms; $('seek').value = 0;
+        // Do not restart gameplay when the optional brain trace finishes loading.
         renderMetrics(game.metrics);
         $('clock').textContent = `0:00 / ${timeLabel(game.duration_ms)}`;
         $('status').textContent = manifest.audio_url ? 'Ready. Press Play replay.' : 'Ready. This replay has no music file.';
@@ -268,7 +282,7 @@ async function load(index) {
             if (mine === version) $('status').textContent = 'Music download failed: ' + error.message;
         });
     } catch (error) {
-        if (mine === version && error.name !== 'AbortError') { $('status').textContent = 'Error: ' + error.message; $('neural').textContent = 'Replay load failed. Select it again to retry.'; }
+        if (mine === version && error.name !== 'AbortError') { $('status').textContent = (loadComplete ? 'Gameplay ready; neuron trace unavailable: ' : 'Error: ') + error.message; $('neural').textContent = 'Recorded neuron trace could not be loaded.'; }
     }
 }
 $('skin').onchange = async () => {
@@ -450,10 +464,10 @@ function drawBrain() {
 }
 function animate(now) {
     requestAnimationFrame(animate);
-    if (loadComplete && game && trace) {
+    if (loadComplete && game) {
         const state = viewer.contentWindow.taikoState, time = state.currentTimeMs;
-        const index = sample(time); if (index !== shown) updateBrain(index);
-        if (state.isPlaying && now - lastBrainPaint >= 40) {
+        const index = trace ? sample(time) : -1; if (trace && index !== shown) updateBrain(index);
+        if (trace && state.isPlaying && now - lastBrainPaint >= 40) {
             cloud.rotation.y += .004; updatePulses(time); lastBrainPaint = now; brainDirty = true;
         }
         if (now - lastHUD > 200) {
@@ -469,7 +483,7 @@ function animate(now) {
 requestAnimationFrame(animate);
 async function initialize() { try {
     const requested = new URLSearchParams(location.search).get('dataset');
-    const response = await fetch(backend('/api/replays'), {cache:'no-store'});
+    const response = await fetch(libraryURL(), {cache:'no-store'});
     if (!response.ok) throw Error('Replay library unavailable: HTTP '+response.status);
     const rows=(await response.json()).replays;
     const selected=rows.find(r=>r.dataset===requested);
@@ -478,11 +492,12 @@ async function initialize() { try {
     await refreshReplayLibrary(dataset);
     if(!dataset) { $('status').textContent='Upload a map to create your first replay.'; document.querySelector('h1').textContent='FlyTaiko'; return; }
     if(!/^[a-zA-Z0-9-]+$/.test(dataset)) throw Error('Invalid dataset');
-    manifest = /^user-v(?:23|24|25)-/.test(dataset) ? await waitForUserReplay(dataset) : await json('demos/'+dataset+'/manifest.json');
+    const record=rows.find(r=>r.dataset===dataset);
+    manifest = window.FLYTAIKO_CLOUD_MODE ? (record.manifest || await json(record.manifest_url)) : /^user-v(?:23|24|25)-/.test(dataset) ? await waitForUserReplay(dataset) : await json('demos/'+dataset+'/manifest.json');
     document.querySelector('h1').textContent=(manifest.replays[0]?.label || 'FlyTaiko').replace(/ · selected/g,'').replace(/ · (full map|toàn bài)/g,'');
     $('checkpoint-label').textContent=(dataset.match(/user-(v\d+)-/)?.[1]?.toUpperCase() || 'MODEL')+' · RECORDED REPLAY';
     $('scope-description').textContent='Offline checkpoint inference. Recorded keys and judgments are preserved, not snapped to notes. This does not control the real osu! client.';
-    const link=document.createElement('a'); link.href=backend('demos/'+dataset+'/manifest.json'); link.textContent='Manifest / provenance'; $('source-links').replaceChildren(link);
+    const link=document.createElement('a'); link.href=record.manifest_url||backend('demos/'+dataset+'/manifest.json'); link.textContent='Manifest / provenance'; $('source-links').replaceChildren(link);
     anatomy().catch(e=>{$('brain').textContent='Anatomy load failed: '+e.message;});
     bytes(manifest.sample_edges.url).then(async data=>{await verify(data,manifest.sample_edges.sha256);edgeRows=JSON.parse(new TextDecoder().decode(data));rebuildEdges();}).catch(e=>{$('neural').title=e.message;});
     const fullIndex=manifest.replays.findIndex(r=>r.kind==='full');

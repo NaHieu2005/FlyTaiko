@@ -18,18 +18,20 @@ get('upload-map').onclick = () => {
   body.charts.forEach((c,i)=>get('upload-chart').add(new Option(`${c.artist} - ${c.title} [${c.version}] · ${c.notes} notes`,i)));
   get('generate-replay').disabled=false; status('Select a difficulty and mods, then generate a replay.');
  }catch(e){status(`Error: ${e.message}`);}finally{get('upload-map').disabled=false;}};
- xhr.send(file);
+ window.flytaikoOwner.token().then(token=>{xhr.setRequestHeader('Authorization','Bearer '+token);xhr.send(file);}).catch(e=>{status(e.message);get('upload-map').disabled=false;});
 };
 get('generate-replay').onclick=async()=>{
  get('generate-replay').disabled=true;
  try {
-  const job=await response(await fetch(endpoint('/api/replays'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({upload_id:uploadId,chart_index:Number(get('upload-chart').value),mods:get('upload-mods').value,model:'v25'})}));
+  const token=await window.flytaikoOwner.token();
+  const job=await response(await fetch(endpoint('/api/replays'),{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({upload_id:uploadId,chart_index:Number(get('upload-chart').value),mods:get('upload-mods').value,model:'v25'})}));
   localStorage.setItem('flytaiko-replay-job',job.job_id); watch(job.job_id);
  }catch(e){status(`Error: ${e.message}`);get('generate-replay').disabled=false;}
 };
 async function poll(id) {
  try {
-  const res=await fetch(endpoint(`/api/replays/${id}`),{cache:'no-store'});
+  const token=await window.flytaikoOwner.token();
+  const res=await fetch(endpoint(`/api/replays/${id}`),{cache:'no-store',headers:{Authorization:'Bearer '+token}});
   if(res.status===404){clearInterval(timer);localStorage.removeItem('flytaiko-replay-job');status('Previous job is unavailable. Select a saved replay or upload a new map.');return;}
   const job=await response(res);
   status(`Job ${id}: ${job.status}${job.progress_frames ? ` · ${job.progress_frames} frames` : ''}`);
@@ -44,4 +46,5 @@ async function poll(id) {
  }catch(e){status(`Status unavailable: ${e.message}`);}
 }
 function watch(id){clearInterval(timer);timer=setInterval(()=>poll(id),5000);poll(id);}
-const previous=localStorage.getItem('flytaiko-replay-job'); if(/^[a-f0-9]{12}$/.test(previous||''))watch(previous);
+window.addEventListener('owner-session',e=>{if(!e.detail){clearInterval(timer);return;}const previous=localStorage.getItem('flytaiko-replay-job');if(/^[a-f0-9]{12}$/.test(previous||''))watch(previous);});
+window.flytaikoOwner.ready.then(()=>{const previous=localStorage.getItem('flytaiko-replay-job');if(/^[a-f0-9]{12}$/.test(previous||''))return window.flytaikoOwner.token().then(()=>watch(previous));}).catch(()=>{});
