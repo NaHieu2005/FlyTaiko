@@ -250,7 +250,8 @@ async function start() {
     blankPaint.fillStyle = '#151924'; blankPaint.fillRect(0, 0, 1000, 300);
     blankPaint.fillStyle = '#93a6c2'; blankPaint.font = 'bold 36px system-ui';
     blankPaint.textAlign = 'center'; blankPaint.fillText('Taiko replay', 500, 165);
-    const screenTexture = new THREE.CanvasTexture(blank);
+    let screenTexture = new THREE.CanvasTexture(blank);
+    let textureWidth=blank.width,textureHeight=blank.height;
     screenTexture.colorSpace = THREE.SRGBColorSpace;
     screenTexture.minFilter = THREE.LinearFilter;
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 1.18*9/16),
@@ -381,10 +382,19 @@ async function start() {
         const state = page?.taikoState;
         const canvas = page?.document?.getElementById('game-canvas');
         if (canvas && page.document.body.classList.contains('recorded-mode')) {
-            if (screenTexture.image !== canvas || lastPlayerFrame !== state?.frameCount) {
-                screenTexture.image = canvas;
+            if (screenTexture.image !== canvas || textureWidth !== canvas.width || textureHeight !== canvas.height) {
+                const old = screenTexture;
+                screenTexture = new THREE.CanvasTexture(canvas);
+                screenTexture.colorSpace = THREE.SRGBColorSpace;
+                screenTexture.minFilter = THREE.LinearFilter;
+                screen.material.map = screenTexture; screen.material.needsUpdate = true;
+                old.dispose(); lastPlayerFrame = -1;
+                textureWidth=canvas.width;textureHeight=canvas.height;
+            }
+            const currentFrame = page.recordedReplaySnapshot?.()?.rendered_frames ?? state?.frameCount;
+            if (lastPlayerFrame !== currentFrame) {
                 screenTexture.needsUpdate = true;
-                lastPlayerFrame = state?.frameCount ?? -1;
+                lastPlayerFrame = currentFrame ?? -1;
             }
         }
         const force = recordedForces();
@@ -465,14 +475,14 @@ async function fallback(originalError) {
         for (let y = h * .56; y < h; y += 35) {
             ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
         }
-        const sw = Math.min(w * .68, h * 1.2), sh = sw * .37;
+        const sw = Math.min(w * .68, h * 1.2), sh = sw * 9/16;
         const sx = (w - sw) / 2, sy = h * .08;
         ctx.fillStyle = '#060910'; ctx.fillRect(sx - 8, sy - 8, sw + 16, sh + 16);
         const game = viewer.contentWindow?.document?.getElementById('game-canvas');
         if (game && viewer.contentWindow.document.body.classList.contains('recorded-mode'))
             ctx.drawImage(game, sx, sy, sw, sh);
         else { ctx.fillStyle = '#172130'; ctx.fillRect(sx, sy, sw, sh); }
-        const hitX = sx + sw * .15, hitY = sy + sh * .5;
+        const hitX = sx + sw * .1875, hitY = sy + sh * (231.4453125/562.5);
         ctx.strokeStyle = '#f0f7ff'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(hitX, hitY, Math.max(9, sw * .04), 0, Math.PI * 2); ctx.stroke();
         ctx.fillStyle = '#0b111c'; ctx.fillRect(w / 2 - 6, sy + sh + 8, 12, 26);
