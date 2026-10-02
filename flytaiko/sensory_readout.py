@@ -7,8 +7,8 @@ import numpy as np
 from scipy import sparse
 import torch
 
-from motor_policy import output_features
-from prepare_malecns import ROOT
+from flytaiko.motor_policy import output_features
+from flytaiko.prepare_malecns import ROOT
 
 
 class SensoryReadout:

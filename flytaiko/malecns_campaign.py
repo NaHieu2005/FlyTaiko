@@ -17,12 +17,12 @@ from zipfile import ZipFile
 import numpy as np
 import torch
 from taiko.parser import parse_osu_text
-from extract_beatmaps import extract_beatmap_data
-from visual_taiko import VisualGame, GameplayPixels, beatmap_from_json, all_metrics
-from malecns_system import MeasuredBrain
-from neural_system import NeuralDecoder, seed_all
-from neural_campaign import atomic_json
-from prepare_malecns import ROOT
+from flytaiko.extract_beatmaps import extract_beatmap_data
+from flytaiko.visual_taiko import VisualGame, GameplayPixels, beatmap_from_json, all_metrics
+from flytaiko.malecns_system import MeasuredBrain
+from flytaiko.neural_system import NeuralDecoder, seed_all
+from flytaiko.neural_campaign import atomic_json
+from flytaiko.prepare_malecns import ROOT
 
 def log(root,event,**values):
     record={'time':time.strftime('%Y-%m-%dT%H:%M:%S'),'event':event,**values}
@@ -126,7 +126,7 @@ def main():
     if calibration['status']!='motor_signal_found':raise ValueError('Motor signal gate not passed')
     selected=calibration['selected'];report=json.loads((ROOT/'graph_report.json').read_text())
     source_hash={n:hashlib.sha256(Path(n).read_bytes()).hexdigest() for n in
-                 ('malecns_system.py','visual_taiko.py','malecns_campaign.py','taiko/parser.py')}
+                 ('flytaiko/malecns_system.py','flytaiko/visual_taiko.py','flytaiko/malecns_campaign.py','taiko/parser.py')}
     config={'architecture':'malecns-image-motor-v1','dataset':report,'gain':selected['gain'],
             'tonic':selected['tonic'],'step_ms':8,'lif_dt_ms':.5,'seed':42,
             'input':'RGB viewport only','output':'2129 measured descending/motor neurons only',

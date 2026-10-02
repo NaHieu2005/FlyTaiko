@@ -4,8 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 from taiko.parser import parse_osu_text
-from extract_beatmaps import extract_beatmap_data
-from neural_campaign import atomic_json
+from flytaiko.extract_beatmaps import extract_beatmap_data
+from flytaiko.neural_campaign import atomic_json
 
 def refresh(row):
     source=Path(row['source']);raw=source.read_bytes()

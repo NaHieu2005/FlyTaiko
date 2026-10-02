@@ -14,13 +14,13 @@ import shutil
 import numpy as np
 import torch
 
-from malecns_cache_parallel import cache_parallel, missing_indices
-from malecns_training import excerpt
-from neural_campaign import atomic_json
-from sensory_temporal_policy import SensoryTemporalPolicy
-from train_v23_full import (BASE, BONUS, LOW, ROOT as FULL, entries, load_best,
+from training.common.cache_parallel import cache_parallel, missing_indices
+from flytaiko.malecns_training import excerpt
+from flytaiko.neural_campaign import atomic_json
+from flytaiko.sensory_temporal_policy import SensoryTemporalPolicy
+from training.v23.train_full import (BASE, BONUS, LOW, ROOT as FULL, entries, load_best,
                             objective, read, train_epoch)
-from warm_validation import WarmValidationEngine, contextual_probes
+from flytaiko.warm_validation import WarmValidationEngine, contextual_probes
 
 
 ROOT = Path('runs/malecns_v23_spinner_finetune')
@@ -64,7 +64,7 @@ def main():
     if args.purple_spinner:
         config['observation_style'] = 'web-native-purple-spinner'
         config['architecture'] = 'malecns-image-motor-v24-purple-spinner-finetune'
-        for name in ('highres_taiko.py', 'malecns_training.py'):
+        for name in ('flytaiko/highres_taiko.py', 'flytaiko/malecns_training.py'):
             config['source_hashes'][name] = hashlib.sha256(Path(name).read_bytes()).hexdigest()
     split = read(BASE / 'split.json')
     bonus = read(BONUS / 'rows.json')

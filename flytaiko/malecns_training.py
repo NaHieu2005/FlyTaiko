@@ -14,13 +14,13 @@ import shutil
 import time
 import numpy as np
 import torch
-from neural_campaign import atomic_json
-from neural_system import seed_all
-from malecns_system import MeasuredBrain
-from malecns_campaign import reset, rgb_png, log
-from motor_policy import MotorPolicy, KeyInterface, ACTION_TO_CATEGORY, output_features
-from visual_taiko import VisualGame, GameplayPixels, beatmap_from_json, all_metrics
-from prepare_malecns import ROOT
+from flytaiko.neural_campaign import atomic_json
+from flytaiko.neural_system import seed_all
+from flytaiko.malecns_system import MeasuredBrain
+from flytaiko.malecns_campaign import reset, rgb_png, log
+from flytaiko.motor_policy import MotorPolicy, KeyInterface, ACTION_TO_CATEGORY, output_features
+from flytaiko.visual_taiko import VisualGame, GameplayPixels, beatmap_from_json, all_metrics
+from flytaiko.prepare_malecns import ROOT
 
 VERSION='malecns-image-motor-v18-osu-taiko-16x9-sv'
 PROFILES={'clean':dict(latency=0,jitter=0,drop=0,noise=0,drift=0),
@@ -146,7 +146,7 @@ def audit_expert_split(split,root,fast=False):
                 game.advance(8)
                 action=teacher_action(game)
                 if fast:
-                    from motor_modes import fast_long_teacher
+                    from flytaiko.motor_modes import fast_long_teacher
                     action=fast_long_teacher(game,teacher_action)
                 game.hit(action)
             result=all_metrics([game])
@@ -166,13 +166,13 @@ class Engine:
         style=config.get('observation_style','legacy')
         if style=='legacy':self.renderer=GameplayPixels()
         elif style=='web-default':
-            from visual_taiko import DefaultSkinGameplayPixels
+            from flytaiko.visual_taiko import DefaultSkinGameplayPixels
             self.renderer=DefaultSkinGameplayPixels()
         elif style=='web-native-resolution':
-            from highres_taiko import HighResolutionTaikoPixels
+            from flytaiko.highres_taiko import HighResolutionTaikoPixels
             self.renderer=HighResolutionTaikoPixels()
         elif style=='web-native-purple-spinner':
-            from highres_taiko import HighResolutionTaikoPixels
+            from flytaiko.highres_taiko import HighResolutionTaikoPixels
             self.renderer=HighResolutionTaikoPixels(spinner_palette='purple')
         else:raise ValueError('Unknown observation style: '+str(style))
 
@@ -180,7 +180,7 @@ class Engine:
         if self.brain is None or self.brain.batch!=batch:
             self.brain=None;torch.cuda.empty_cache()
             if self.config.get('neuron_model')=='graded-rate engineering hypothesis':
-                from measured_rate_system import MeasuredRateBrain
+                from flytaiko.measured_rate_system import MeasuredRateBrain
                 self.brain=MeasuredRateBrain(batch=batch,coupling=self.config.get('rate_coupling',.95),baseline=.5)
             else:self.brain=MeasuredBrain(batch=batch,gain=self.config['gain'],tonic=self.config['tonic'],
                                     tonic_scope=self.config.get('tonic_scope','all'),
@@ -191,7 +191,7 @@ class Engine:
             collect_callback=None,trace=False,seed=42,training_label_fn=None):
         brain=self.brain_for(len(rows));games=[VisualGame(beatmap_from_json(r)) for r in rows]
         if self.config.get('decoder_input')=='sensory_memory' and self.sensor is None:
-            from sensory_readout import SensoryReadout
+            from flytaiko.sensory_readout import SensoryReadout
             self.sensor=SensoryReadout(brain.metadata,brain.arrays)
         brain.retina.bounds=tuple(self.config.get('retina_bounds',(0.,0.,1.,1.)))
         brain.retina.bilinear=self.config.get('retina_bilinear',False)
@@ -204,7 +204,7 @@ class Engine:
         queues=[deque() for _ in rows];held=[np.zeros(shape,dtype=np.uint8) for _ in rows]
         interface=KeyInterface
         if self.config.get('motor_interface')=='continuous_modes':
-            from motor_modes import ModeKeyInterface
+            from flytaiko.motor_modes import ModeKeyInterface
             interface=ModeKeyInterface
         keys=[interface(threshold=threshold,release=min(.35,threshold-.05)) for _ in rows]
         if self.config.get('warmup_ms',0):
@@ -246,7 +246,7 @@ class Engine:
                 if not g.is_done:g.step_ms=delta*clock_rate;g.advance(delta*clock_rate)
             teacher=teacher_action
             if self.config.get('motor_interface')=='continuous_modes':
-                from motor_modes import fast_long_teacher,mode_training_label
+                from flytaiko.motor_modes import fast_long_teacher,mode_training_label
                 teacher=lambda g:fast_long_teacher(g,teacher_action)
             expert=(np.array([teacher(g) if not g.is_done else 0 for g in games],dtype=np.int64)
                     if policy is None else np.zeros(len(games),dtype=np.int64))
@@ -353,7 +353,7 @@ def fit(engine,cache_dirs,validation,out,epochs=20,initial=None,phase='A',thresh
     out.mkdir(parents=True,exist_ok=True);size=len(np.load(ROOT/'graph_arrays.npz')['output'])*4
     cls=MotorPolicy
     if engine.config.get('motor_interface')=='continuous_modes':
-        from motor_modes import ModeMotorPolicy
+        from flytaiko.motor_modes import ModeMotorPolicy
         cls=ModeMotorPolicy
     policy=cls(size,hidden=engine.config['decoder_hidden'],
                        input_dropout=engine.config['decoder_dropout'],
@@ -438,7 +438,7 @@ def load_policy(path):
     payload=torch.load(path,map_location='cuda',weights_only=False)
     cls=MotorPolicy
     if payload['policy']['net.4.weight'].shape[0]==7:
-        from motor_modes import ModeMotorPolicy
+        from flytaiko.motor_modes import ModeMotorPolicy
         cls=ModeMotorPolicy
     policy=cls(len(payload['policy']['mean']),hidden=payload['policy']['net.0.weight'].shape[0],
                        input_dropout=payload['config'].get('decoder_dropout',0.)).cuda()
@@ -506,10 +506,10 @@ def make_config(args):
             'cache_workers':getattr(args,'cache_workers',1),
             'graph_hashes':{k:v['sha256'] for k,v in json.loads((ROOT/'source_manifest.json').read_text())['files'].items()},
             'source_hashes':{n:hashlib.sha256(Path(n).read_bytes()).hexdigest() for n in
-                            ('malecns_training.py','malecns_system.py','deterministic_sparse.py',
-                             'malecns_campaign.py','motor_policy.py','visual_taiko.py','taiko/parser.py',
-                             'measured_rate_system.py','motor_modes.py','circle_region_labels.py',
-                             'malecns_cache_parallel.py','malecns_cache_migration.py','refresh_native_split.py',
+                            ('flytaiko/malecns_training.py','flytaiko/malecns_system.py','flytaiko/deterministic_sparse.py',
+                             'flytaiko/malecns_campaign.py','flytaiko/motor_policy.py','flytaiko/visual_taiko.py','taiko/parser.py',
+                             'flytaiko/measured_rate_system.py','flytaiko/motor_modes.py','flytaiko/circle_region_labels.py',
+                             'training/common/cache_parallel.py','training/common/cache_migration.py','training/common/refresh_native_split.py',
                              'malecns_relabel_cache.py')}}
 
 def main():
@@ -541,7 +541,7 @@ def main():
         raise RuntimeError('Previous expert preflight failed; refusing GPU training')
     engine=Engine(config,root)
     if args.smoke:
-        from malecns_campaign import smoke_rows
+        from flytaiko.malecns_campaign import smoke_rows
         examples=smoke_rows(split['A'])
         engine.cache(examples,root/'cache_A')
         checkpoint=fit(engine,[root/'cache_A'],examples,root/'phase_A',args.epochs)
@@ -562,7 +562,7 @@ def main():
     pilot_gate=gate(engine,pilot_rows,pilot);atomic_json(root/'pilot_gate.json',pilot_gate)
     if not pilot_gate['passed']:
         log(root,'gate_failed',stage='held_out_pilot',metrics=pilot_gate);return
-    from malecns_cache_parallel import cache_parallel
+    from training.common.cache_parallel import cache_parallel
     cache_parallel(engine,split['A'],root/'cache_A',workers=args.cache_workers,stage='A')
     best=fit(engine,[root/'cache_A'],validation,root/'phase_A',args.epochs,initial=pilot)
     a_gate=gate(engine,validation,best);atomic_json(root/'A_gate.json',a_gate)
@@ -594,7 +594,7 @@ def main():
     target=targets[0] if targets else split['test'][0]
     # The imported dataset records the previous renderer's per-object speed.
     # Reparse the hash-verified native .osu before publishing a v18 replay.
-    from refresh_native_split import refresh
+    from training.common.refresh_native_split import refresh
     target=refresh(target)
     output=Path('web-fly/public/demos/malecns-v18-final-replay.json')
     replay=publish_replay(engine,target,selected,output)

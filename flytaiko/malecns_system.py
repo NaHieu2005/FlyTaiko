@@ -14,7 +14,7 @@ import pyarrow as pa
 from scipy import sparse
 import torch
 
-from prepare_malecns import ROOT, FILES
+from flytaiko.prepare_malecns import ROOT, FILES
 
 def build_graph(root=ROOT):
     root=Path(root)
@@ -138,7 +138,7 @@ class MeasuredBrain:
                   torch.as_tensor(signed.data*gain,dtype=torch.float32,device=device),size=signed.shape)
         self.fixed_synapses=None
         if self.device.type=='cuda':
-            from deterministic_sparse import FixedCSR
+            from flytaiko.deterministic_sparse import FixedCSR
             signed.data=(signed.data*gain).astype(np.float32)
             self.fixed_synapses=FixedCSR(signed,self.device)
         self.retina=ImageRetina(self.arrays,device)

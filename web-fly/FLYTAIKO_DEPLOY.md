@@ -2,7 +2,7 @@
 
 The Vercel site is a static client. It does not run MaleCNS inference, store
 uploads, or publish model weights. GPU inference and generated demo files are
-served by `replay_web_server.py` on a separate, persistent machine.
+served by `python -m flytaiko.replay_web_server` on a separate, persistent GPU host.
 
 ## Frontend
 
@@ -29,7 +29,7 @@ replace it: replay inference outlasts typical function lifetimes, and an .osz
 upload often exceeds the Function body limit. Put the service behind HTTPS
 and a reverse proxy with upload rate limits and abuse protection. Configure
 `FLYTAIKO_ALLOWED_ORIGINS=https://YOUR-VERCEL-DOMAIN` before starting
-`replay_web_server.py`. Do not expose a development VS Code port-forward as
+`python -m flytaiko.replay_web_server`. Do not expose a development VS Code port-forward as
 the permanent public GPU endpoint.
 
 Only publish beatmaps, audio, and skins you have the right to redistribute.

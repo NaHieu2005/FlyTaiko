@@ -16,9 +16,9 @@ import time
 import numpy as np
 import torch
 
-from neural_system import NeuralConfig, NeuralRuntime, JsonBeatmap, seed_all
-from neural_game import Game, Observation, PROFILES, metrics
-from train_campaign import select_short_campaign
+from flytaiko.neural_system import NeuralConfig, NeuralRuntime, JsonBeatmap, seed_all
+from flytaiko.neural_game import Game, Observation, PROFILES, metrics
+from training.legacy.train_campaign import select_short_campaign
 
 
 def log(root, record):
@@ -289,7 +289,7 @@ def main():
         raise ValueError('Existing run has a different config; use a new run directory')
     atomic_json(root/'config.json',asdict(cfg))
     atomic_json(root/'source_snapshot.json',{name:hashlib.sha256(Path(name).read_bytes()).hexdigest()
-                for name in ('neural_campaign.py','neural_system.py','neural_game.py')})
+                for name in ('flytaiko/neural_campaign.py','flytaiko/neural_system.py','flytaiko/neural_game.py')})
     raw=json.load(open('kaggle_data/taiko_beatmaps.json'))
     previous=json.load(open('runs/campaign_100A_50B/split.json'))
     a,b,val=select_short_campaign(raw,previous)

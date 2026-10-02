@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 import hashlib
 from zipfile import ZipFile
-from prepare_malecns_taiko_demo import gameplay, neural, audio_from_archive
-from visual_taiko import VisualGame, beatmap_from_json, all_metrics
+from flytaiko.prepare_malecns_taiko_demo import gameplay, neural, audio_from_archive
+from flytaiko.visual_taiko import VisualGame, beatmap_from_json, all_metrics
 
 
 def recorded_value():
@@ -63,8 +63,8 @@ def test_double_time_replay_uses_12ms_chart_steps_for_8ms_real_frames():
 def test_completed_replay_without_phase_a_export_keeps_source_provenance(monkeypatch):
     value = recorded_value()
     del value['phase_a_export']
-    from prepare_malecns_taiko_demo import beatmap_from_json as parse
-    monkeypatch.setattr('prepare_malecns_taiko_demo.beatmap_from_json',
+    from flytaiko.prepare_malecns_taiko_demo import beatmap_from_json as parse
+    monkeypatch.setattr('flytaiko.prepare_malecns_taiko_demo.beatmap_from_json',
                         lambda row: parse({k: v for k, v in row.items()
                                            if k not in ('source', 'source_sha256')}))
     value['beatmap']['source'] = '/verified/native.osu'
@@ -96,7 +96,7 @@ def test_trace_binary_copies_real_samples_without_interpolation(tmp_path):
 
 def audio_fixture(tmp_path, archived_filename='audio.mp3'):
     from taiko.parser import parse_osu_text
-    from extract_beatmaps import extract_beatmap_data
+    from flytaiko.extract_beatmaps import extract_beatmap_data
     text = '''osu file format v14
 [General]
 AudioFilename: audio.mp3

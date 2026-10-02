@@ -15,7 +15,7 @@ weights are not distributed in Git. Load trusted PyTorch checkpoints only.
 | `runs/malecns_v23_full/config.json` | Reference sensory configuration |
 
 Rows include parsed metadata, notes, timing and scroll information. Consult
-`train_v25_full.prepare()` and `train_v23_full.entries()` for the schema.
+`training.v25.train_full.prepare()` and `training.v23.train_full.entries()` for the schema.
 A fresh checkout cannot train until these manifests and the graph are provided.
 `models/v25/config.json` is a reference; preserve verified splits and metadata.
 
@@ -23,9 +23,9 @@ A fresh checkout cannot train until these manifests and the graph are provided.
 
 ```bash
 mkdir -p runs
-python train_v25_full.py --help
-python train_v25_full.py --preflight-only
-python -u train_v25_full.py > runs/malecns-v25-full.log 2>&1
+python -m training.v25.train_full --help
+python -m training.v25.train_full --preflight-only
+python -u -m training.v25.train_full > runs/malecns-v25-full.log 2>&1
 ```
 
 For unattended execution use tmux on the remote GPU server. The campaign builds
@@ -44,7 +44,7 @@ Low loss does not guarantee SS or unseen-map generalization.
 
 Place the selected trusted checkpoint at `models/v25/policy.pt` and its exact
 matching config at `models/v25/config.json`, or set `FLYTAIKO_MODEL_DIR`.
-`replay_models.load_v25()` rejects config/checkpoint mismatches. Restart the GPU
+`flytaiko.replay_models.load_v25()` rejects config/checkpoint mismatches. Restart the GPU
 service after changing weights. Existing replays remain historical recordings.
 See [WEB.md](WEB.md) for upload and playback instructions.
 

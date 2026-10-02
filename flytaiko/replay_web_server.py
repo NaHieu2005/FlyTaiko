@@ -17,13 +17,13 @@ import uuid
 from urllib.parse import urlsplit
 from zipfile import ZipFile, BadZipFile
 
-from extract_beatmaps import extract_beatmap_data
-from neural_campaign import atomic_json
+from flytaiko.extract_beatmaps import extract_beatmap_data
+from flytaiko.neural_campaign import atomic_json
 from taiko.parser import parse_osu_text
-from replay_store import library, reconcile, save_job
+from flytaiko.replay_store import library, reconcile, save_job
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / 'web-fly/public'
 JOBS = ROOT / 'runs/user_replays'
 MAX_UPLOAD = 128 * 1024**2
@@ -266,7 +266,7 @@ class Handler(SimpleHTTPRequestHandler):
                              'mods': mods, 'model': model})
                     save_job(json.loads((job_dir / 'status.json').read_text()))
                     log = (job_dir / 'worker.log').open('w')
-                    command = [sys.executable, '-u', 'replay_osz_worker.py',
+                    command = [sys.executable, '-u', '-m', 'flytaiko.replay_osz_worker',
                                '--upload', upload_id, '--chart', str(chart_index), '--job', job_id,
                                '--mods', mods, '--model', model]
                     try:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 
-from sensory_temporal_policy import SensoryTemporalPolicy
+from flytaiko.sensory_temporal_policy import SensoryTemporalPolicy
 
 
 def load_v25():

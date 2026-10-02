@@ -13,11 +13,11 @@ import shutil
 import numpy as np
 import torch
 
-from malecns_cache_parallel import cache_parallel, missing_indices
-from malecns_training import excerpt, score, song_key
-from neural_campaign import atomic_json
-from sensory_temporal_policy import SensoryTemporalPolicy
-from warm_validation import WarmValidationEngine, contextual_probes
+from training.common.cache_parallel import cache_parallel, missing_indices
+from flytaiko.malecns_training import excerpt, score, song_key
+from flytaiko.neural_campaign import atomic_json
+from flytaiko.sensory_temporal_policy import SensoryTemporalPolicy
+from flytaiko.warm_validation import WarmValidationEngine, contextual_probes
 
 
 ROOT = Path('runs/malecns_v23_full')
@@ -67,9 +67,9 @@ def prepare():
     config.update(architecture='malecns-image-motor-v23-full-sensory-memory',
                   phase_plan='A:100 base+22 bonus+30 low-SV augment; C:50; two 8s clips/map')
     config['source_hashes'] = {name: digest(name) for name in (
-        'malecns_training.py', 'sensory_readout.py', 'sensory_temporal_policy.py',
-        'highres_taiko.py', 'malecns_cache_parallel.py',
-        'warm_validation.py', 'train_v23_full.py')}
+        'flytaiko/malecns_training.py', 'flytaiko/sensory_readout.py', 'flytaiko/sensory_temporal_policy.py',
+        'flytaiko/highres_taiko.py', 'training/common/cache_parallel.py',
+        'flytaiko/warm_validation.py', 'training/v23/train_full.py')}
     split = read(BASE / 'split.json')
     bonus = read(BONUS / 'rows.json')
     augmented = read(LOW / 'rows.json')

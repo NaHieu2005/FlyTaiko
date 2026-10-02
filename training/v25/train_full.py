@@ -13,13 +13,13 @@ import shutil
 import numpy as np
 import torch
 
-from malecns_cache_parallel import cache_parallel, missing_indices
-from malecns_training import song_key
-from neural_campaign import atomic_json
-from train_v23_full import (BASE, BONUS, LOW, calibrate, clips, entries,
+from training.common.cache_parallel import cache_parallel, missing_indices
+from flytaiko.malecns_training import song_key
+from flytaiko.neural_campaign import atomic_json
+from training.v23.train_full import (BASE, BONUS, LOW, calibrate, clips, entries,
                             load_best, objective, read, train_epoch)
-from train_v23_spinner_finetune import selected_long_clips
-from warm_validation import WarmValidationEngine, contextual_probes
+from training.v23.spinner_finetune import selected_long_clips
+from flytaiko.warm_validation import WarmValidationEngine, contextual_probes
 
 
 ROOT = Path('runs/malecns_v25_full')
@@ -38,9 +38,9 @@ def prepare():
                   phase_plan='A:100 base+22 bonus+30 low-SV; C:50; 2 circle clips/map plus native spinner clips',
                   cache_workers=2)
     config['source_hashes'] = {name: sha(name) for name in (
-        'malecns_training.py', 'sensory_readout.py', 'sensory_temporal_policy.py',
-        'highres_taiko.py', 'malecns_cache_parallel.py', 'warm_validation.py',
-        'train_v23_full.py', 'train_v23_spinner_finetune.py', 'train_v25_full.py')}
+        'flytaiko/malecns_training.py', 'flytaiko/sensory_readout.py', 'flytaiko/sensory_temporal_policy.py',
+        'flytaiko/highres_taiko.py', 'training/common/cache_parallel.py', 'flytaiko/warm_validation.py',
+        'training/v23/train_full.py', 'training/v23/spinner_finetune.py', 'training/v25/train_full.py')}
     split = read(BASE / 'split.json')
     bonus = read(BONUS / 'rows.json')
     augmented = read(LOW / 'rows.json')
@@ -92,7 +92,7 @@ def quality(result):
 
 
 def train_stage(stage, paths, config, engine, probes, initial):
-    from sensory_temporal_policy import SensoryTemporalPolicy
+    from flytaiko.sensory_temporal_policy import SensoryTemporalPolicy
     out = ROOT / ('phase_' + stage)
     out.mkdir(exist_ok=True)
     width = np.load(paths[0].with_suffix('.npy'), mmap_mode='r').shape[1]

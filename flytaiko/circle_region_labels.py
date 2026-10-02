@@ -3,7 +3,7 @@
 Never imported by a live policy. Timestamps are exclusively supervised labels.
 """
 import numpy as np
-from neural_game import taiko_windows
+from flytaiko.neural_game import taiko_windows
 
 CATEGORY={'don':1,'kat':2,'don_big':3,'kat_big':4}
 

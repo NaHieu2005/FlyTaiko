@@ -14,7 +14,7 @@ import torch
 from scipy import sparse
 
 from flyconnectome.loader import generate_synthetic_connectome
-from flytaiko_pipeline import Decoder, JsonBeatmap, seed_all
+from flytaiko.flytaiko_pipeline import Decoder, JsonBeatmap, seed_all
 from taiko.environment import ACTION_NAMES, NUM_ACTIONS
 
 

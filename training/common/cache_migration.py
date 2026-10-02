@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 import numpy as np
 import torch
-from neural_campaign import atomic_json
+from flytaiko.neural_campaign import atomic_json
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -19,12 +19,12 @@ def fingerprint(row,config,profile):
     return hashlib.sha256(json.dumps({'row':row,'config':config,'profile':profile},sort_keys=True).encode()).hexdigest()
 
 def numerical_signatures():
-    from malecns_training import Engine,feature_pair,teacher_action
-    from malecns_system import ImageRetina
-    from measured_rate_system import MeasuredRateBrain
-    from motor_policy import output_features
-    from motor_modes import fast_long_teacher,mode_training_label,ModeKeyInterface
-    from visual_taiko import GameplayPixels,VisualGame
+    from flytaiko.malecns_training import Engine,feature_pair,teacher_action
+    from flytaiko.malecns_system import ImageRetina
+    from flytaiko.measured_rate_system import MeasuredRateBrain
+    from flytaiko.motor_policy import output_features
+    from flytaiko.motor_modes import fast_long_teacher,mode_training_label,ModeKeyInterface
+    from flytaiko.visual_taiko import GameplayPixels,VisualGame
     functions=[Engine.run,Engine.brain_for,feature_pair,teacher_action,ImageRetina.sample,
         MeasuredRateBrain.__init__,MeasuredRateBrain.advance,output_features,
         fast_long_teacher,mode_training_label,ModeKeyInterface.decide,
@@ -72,7 +72,7 @@ def migrate_cache(source,destination,rows,oldconfig,newconfig):
     return {'imported':imported,'rejected':rejected,'source':str(source),'destination':str(destination)}
 
 def migrate(source,root,signature_path):
-    from malecns_training import probes,VERSION
+    from flytaiko.malecns_training import probes,VERSION
     evidence=json.loads(signature_path.read_text());oldconfig=json.loads((source/'config.json').read_text())
     config=json.loads((root/'config.json').read_text());split=json.loads((root/'split.json').read_text())
     if evidence['source']!=str(source.resolve()) or evidence['config_sha256']!=digest(source/'config.json'):

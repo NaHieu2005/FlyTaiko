@@ -9,9 +9,9 @@ No RGB-to-output shortcut exists. RGB drives measured photoreceptors only.
 import numpy as np
 from scipy import sparse
 import torch
-from malecns_system import MeasuredBrain
-from deterministic_sparse import FixedCSR
-from prepare_malecns import ROOT
+from flytaiko.malecns_system import MeasuredBrain
+from flytaiko.deterministic_sparse import FixedCSR
+from flytaiko.prepare_malecns import ROOT
 
 class MeasuredRateBrain(MeasuredBrain):
     def __init__(self,root=ROOT,batch=1,device='cuda',coupling=.95,baseline=.5,**kwargs):

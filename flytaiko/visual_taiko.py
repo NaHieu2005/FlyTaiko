@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 import hashlib
 from taiko.parser import TaikoNote, TaikoBeatmap, BeatmapMetadata
-from neural_game import Game, metrics
+from flytaiko.neural_game import Game, metrics
 
 def beatmap_from_json(row):
     if row.get('source') and any('scroll_px_per_ms' not in n for n in row['notes']):

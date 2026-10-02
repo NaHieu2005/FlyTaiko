@@ -10,7 +10,7 @@ from datetime import datetime
 import numpy as np
 import torch
 
-from flytaiko_pipeline import (Config, JsonBeatmap, Runtime, checkpoint, evaluate,
+from flytaiko.flytaiko_pipeline import (Config, JsonBeatmap, Runtime, checkpoint, evaluate,
                               iter_frames, load_model, seed_all, train)
 from taiko.environment import TaikoEnvironment
 

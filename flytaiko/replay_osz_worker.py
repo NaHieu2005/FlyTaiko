@@ -11,13 +11,13 @@ from zipfile import ZipFile
 
 import torch
 
-from extract_beatmaps import extract_beatmap_data
-from neural_campaign import atomic_json
-from neural_system import seed_all
+from flytaiko.extract_beatmaps import extract_beatmap_data
+from flytaiko.neural_campaign import atomic_json
+from flytaiko.neural_system import seed_all
 from taiko.parser import parse_osu_text
-from replay_models import load_v25
-from warm_validation import WarmValidationEngine
-from replay_store import save_job
+from flytaiko.replay_models import load_v25
+from flytaiko.warm_validation import WarmValidationEngine
+from flytaiko.replay_store import save_job
 
 
 BASE = Path('runs/user_replays')
@@ -128,7 +128,7 @@ def main():
         dataset = {'v23': 'user-v23-', 'v24-purple': 'user-v24-',
                    'v25': 'user-v25-'}[args.model] + args.job
         destination = PUBLIC / dataset
-        command = [sys.executable, '-u', 'prepare_malecns_taiko_demo.py',
+        command = [sys.executable, '-u', '-m', 'flytaiko.prepare_malecns_taiko_demo',
                    '--replay', str(replay), '--public', str(destination), '--no-audio']
         subprocess.run(command, check=True)
         if audio_name:

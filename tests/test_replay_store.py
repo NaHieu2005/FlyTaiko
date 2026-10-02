@@ -1,5 +1,5 @@
 import json
-import replay_store
+from flytaiko import replay_store
 
 def test_catalogue_persists_and_updates(tmp_path, monkeypatch):
     monkeypatch.setattr(replay_store, 'DATABASE', tmp_path / 'catalogue.sqlite3')

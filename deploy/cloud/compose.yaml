@@ -1,0 +1,17 @@
+# Run on a Linux GPU cloud host with Docker and NVIDIA Container Toolkit.
+services:
+  replay-api:
+    build:
+      context: ../..
+      dockerfile: deploy/cloud/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      FLYTAIKO_ALLOWED_ORIGINS: ${FLYTAIKO_ALLOWED_ORIGINS:-https://flytaiko.vercel.app}
+    gpus: all
+    volumes:
+      - ../../models/v25:/app/models/v25:ro
+      - ../../connectome_data:/app/connectome_data:ro
+      - ../../runs:/app/runs
+      - ../../web-fly/public/demos:/app/web-fly/public/demos

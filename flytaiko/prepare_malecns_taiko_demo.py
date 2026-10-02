@@ -14,8 +14,8 @@ from zipfile import ZipFile
 
 import numpy as np
 
-from prepare_malecns import ROOT
-from visual_taiko import VisualGame, all_metrics, beatmap_from_json
+from flytaiko.prepare_malecns import ROOT
+from flytaiko.visual_taiko import VisualGame, all_metrics, beatmap_from_json
 
 
 def write_json(path, value):
@@ -164,7 +164,7 @@ def audio_from_archive(value, archive):
     its older chart is never used for note timing, SV, or judgments.
     """
     from taiko.parser import parse_osu_text
-    from extract_beatmaps import extract_beatmap_data
+    from flytaiko.extract_beatmaps import extract_beatmap_data
     recorded = value.get('phase_a_export', value['beatmap'])
     native_bytes = Path(recorded['source']).read_bytes()
     if hashlib.sha256(native_bytes).hexdigest() != recorded['source_sha256']:

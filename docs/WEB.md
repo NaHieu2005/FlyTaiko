@@ -3,7 +3,7 @@
 From the repository root, with the GPU environment and trusted v25 model installed:
 
 ```bash
-python replay_web_server.py --port 8000
+python -m flytaiko.replay_web_server --port 8000
 ```
 
 Open http://localhost:8000/. For SSH, forward port 8000 in VS Code.

@@ -13,11 +13,11 @@ import subprocess
 import sys
 import time
 import torch
-from neural_campaign import atomic_json
-from neural_system import seed_all
+from flytaiko.neural_campaign import atomic_json
+from flytaiko.neural_system import seed_all
 
 def assignments(rows,missing,batch,workers):
-    from malecns_training import endpoint
+    from flytaiko.malecns_training import endpoint
     if len(missing)!=len(set(missing)):raise ValueError('Duplicate cache indices')
     if not 1<=workers<=3 or not 1<=batch<=8:raise ValueError('Unsafe worker/batch count')
     ordered=sorted(missing,key=lambda i:(-endpoint(rows[i]),i));jobs=[[] for _ in range(workers)];loads=[0.]*workers
@@ -27,7 +27,7 @@ def assignments(rows,missing,batch,workers):
     return jobs
 
 def missing_indices(rows,directory,config,profile):
-    from malecns_cache_migration import fingerprint
+    from training.common.cache_migration import fingerprint
     result=[]
     for i,row in enumerate(rows):
         path=directory/f'{i:04d}.json'
@@ -37,7 +37,7 @@ def missing_indices(rows,directory,config,profile):
     return result
 
 def cache_parallel(engine,rows,directory,profile='clean',workers=3,stage='A'):
-    from malecns_campaign import log
+    from flytaiko.malecns_campaign import log
     directory.mkdir(parents=True,exist_ok=True)
     missing=missing_indices(rows,directory,engine.config,profile)
     if not missing:
@@ -65,7 +65,7 @@ def cache_parallel(engine,rows,directory,profile='clean',workers=3,stage='A'):
             reader=stdout_path.open();reader.seek(0,2);readers.append(reader);positions.append(worker)
             env={**os.environ,'OMP_NUM_THREADS':'2','MKL_NUM_THREADS':'2',
                  'OPENBLAS_NUM_THREADS':'1','PYTHONFAULTHANDLER':'1'}
-            command=[sys.executable,'-u','malecns_cache_parallel.py','--worker',str(worker),
+            command=[sys.executable,'-u','-m','training.common.cache_parallel','--worker',str(worker),
                 '--root',str(engine.root),'--rows',str(rows_path),'--indices',str(index_path),
                 '--directory',str(directory),'--profile',profile,'--worker-root',str(worker_root)]
             process=subprocess.Popen(command,stdout=handle,stderr=subprocess.STDOUT,env=env)
@@ -106,7 +106,7 @@ def main():
     p.add_argument('--profile',choices=('clean','combined'),required=True);a=p.parse_args()
     seed_all(42);torch.set_num_threads(2)
     torch.cuda.set_per_process_memory_fraction(.24)
-    from malecns_training import Engine
+    from flytaiko.malecns_training import Engine
     config=json.loads((a.root/'config.json').read_text());rows=json.loads(a.rows.read_text());indices=json.loads(a.indices.read_text())
     # Honor duration order while retaining stable global cache filenames.
     engine=Engine(config,a.worker_root)

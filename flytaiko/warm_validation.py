@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from malecns_training import Engine, probes
-from visual_taiko import all_metrics
+from flytaiko.malecns_training import Engine, probes
+from flytaiko.visual_taiko import all_metrics
 
 
 CIRCLE_TYPES = {'don', 'kat', 'don_big', 'kat_big'}

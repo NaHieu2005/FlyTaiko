@@ -6,8 +6,8 @@ This engineered actuator is NOT an additional measured MaleCNS neuron.
 """
 import numpy as np
 from torch import nn
-from motor_policy import MotorPolicy,KeyInterface
-from circle_region_labels import CATEGORY
+from flytaiko.motor_policy import MotorPolicy,KeyInterface
+from flytaiko.circle_region_labels import CATEGORY
 
 class ModeMotorPolicy(MotorPolicy):
     def __init__(self,*args,**kwargs):

@@ -14,8 +14,8 @@ PyTorch 2.5.1/CUDA 12.4; install the tested dependencies in a virtual environmen
 ```sh
 python3.11 -m venv .venv
 .venv/bin/pip install -r requirements-gpu-cu124.lock
-.venv/bin/python prepare_malecns.py
-.venv/bin/python malecns_system.py
+.venv/bin/python -m flytaiko.prepare_malecns
+.venv/bin/python -m flytaiko.malecns_system
 ```
 
 Place the trusted selected v25 checkpoint at `models/v25/policy.pt`, alongside
@@ -24,10 +24,10 @@ containing those two files. Model weights, downloaded graph data, training
 caches, uploaded archives, and generated demos are supplied separately.
 
 ```sh
-.venv/bin/python replay_web_server.py --bind 127.0.0.1 --port 8000
+.venv/bin/python -m flytaiko.replay_web_server --bind 127.0.0.1 --port 8000
 ```
 
-Open `http://localhost:8000/create-replay.html`, upload an `.osz`, choose a Taiko
+Open `http://localhost:8000/`, upload an `.osz`, choose a Taiko
 difficulty and NM/HR/DT/DTHR, then create the replay. Jobs run asynchronously
 and the finished demo appears in the replay library. Recorded metrics, input
 images and neuron traces are shown with the original recorded key timing.
@@ -43,20 +43,33 @@ See [deployment instructions](web-fly/FLYTAIKO_DEPLOY.md).
 
 The GPU backend must stay online to generate replays. The Vercel site serves
 the frontend; it does not execute CUDA inference.
+Making this repository public does not change that requirement. To remove
+workstation dependence, move runtime and storage to an independent GPU cloud
+host. A container recipe and migration checklist are in [CLOUD.md](docs/CLOUD.md);
+no paid cloud resources have been provisioned.
 
 ## Source layout
 
-- `replay_web_server.py`, `replay_osz_worker.py`, `replay_models.py`: upload API,
-  replay job and selected-model loading.
-- `malecns_system.py`, `measured_rate_system.py`, `sensory_readout.py`,
-  `sensory_temporal_policy.py`: measured graph, graded activity and causal GRU.
-- `visual_taiko.py`, `highres_taiko.py`, `motor_modes.py`, `taiko/`: renderer,
-  native objects, judgments and action interface.
-- `prepare_malecns_taiko_demo.py`: checks and publishes recorded gameplay/trace.
-- `train_v25_full.py`: fresh-cache A/C training with slow-SV and spinner
-  validation. Reproduction also requires the original song-disjoint source
-  manifests referenced by the training script; those datasets are separate.
-- `web-fly/public/`: current Taiko player, uploader, neural display and 3D scene.
+```text
+flytaiko/           Runtime, measured brain, policy, rendering and replay API
+training/
+  v25/             Current fresh-cache A/C campaign
+  v23/             Historical campaign and v23/v24 spinner finetuning
+  common/          Cache workers, fingerprints and split tools
+  legacy/          Early campaign dependencies
+taiko/             Native parser, objects and environment
+flyconnectome/     Early connectome simulation dependencies
+models/v25/        Selected model configuration and evaluation metadata
+web-fly/           Vercel frontend and browser player
+deploy/cloud/      Independent GPU-host container recipe
+docs/              Training, web and cloud migration guides
+tests/             Logic, export and catalogue checks
+```
+
+Run `python -m training.v25.train_full` from the repository root. Training
+requires the original song-disjoint dataset manifests, provided separately.
+v25 reuses methods from v23, so historical code is retained in version folders
+rather than deleted. See [training versions](training/README.md).
 
 ## Checks
 
@@ -86,3 +99,4 @@ replays; it does not control an installed osu! client.
 
 - [Training and dataset prerequisites](docs/TRAINING.md)
 - [All-in-one web, replay database, uploads and deployment](docs/WEB.md)
+- [Removing workstation dependence](docs/CLOUD.md)

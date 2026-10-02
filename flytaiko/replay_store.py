@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import sqlite3
 
-DATABASE = Path(os.environ.get('FLYTAIKO_REPLAY_DB', Path(__file__).resolve().parent / 'runs/replays.sqlite3'))
+DATABASE = Path(os.environ.get('FLYTAIKO_REPLAY_DB', Path(__file__).resolve().parent.parent / 'runs/replays.sqlite3'))
 
 def connect():
     DATABASE.parent.mkdir(parents=True, exist_ok=True)

@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 import torch
 from scipy import sparse
-from neural_system import NeuralConfig, NeuralLIF, NeuralRuntime, JsonBeatmap
-from neural_game import Game, Observation, PROFILES, metrics
+from flytaiko.neural_system import NeuralConfig, NeuralLIF, NeuralRuntime, JsonBeatmap
+from flytaiko.neural_game import Game, Observation, PROFILES, metrics
 
 
 def test_directed_synapse_propagates_from_pre_to_post_only():
@@ -57,7 +57,7 @@ def test_big_note_single_hit_keeps_judgment_but_no_full_hit_bonus():
 
 
 def test_piecewise_hit_windows_match_official_taiko_ranges():
-    from neural_game import taiko_windows
+    from flytaiko.neural_game import taiko_windows
     assert taiko_windows(7)=={'great':28.5,'good':67.5,'miss':84.5}
     assert taiko_windows(10)=={'great':19.5,'good':49.5,'miss':69.5}
 
