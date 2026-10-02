@@ -56,6 +56,22 @@ installed web dependencies for publication; that container remains unvalidated.
 
 ## Storage, speed and recovery
 
+### Backgrounds and personal skins
+
+Beatmap backgrounds are extracted from OSZ Events and published with each new
+replay. **Background brightness** controls the same canvas used by the 2D
+player and the monitor in the 3D scene; the setting is remembered locally.
+
+**Import skin** accepts `.osk`, `.zip` or a skin folder. Selected Taiko PNG
+notes/overlays, lane, roll, spinner and OGG/WAV/MP3 hitsounds are stored in
+browser IndexedDB, not uploaded to the public library. `@2x` is preferred;
+missing optional assets fall back to the default presentation. Hitcircle is
+required. Skin notes use the existing fixed gameplay geometry, not arbitrary
+image dimensions. This is a Taiko subset, not complete osu! skin.ini/animation
+compatibility. Brightness and skins affect presentation only, not model input
+or replay judgments. Archive limit is 64 MB, selected asset limit 40 MB and
+individual asset limit 8 MB. Clearing website data removes imported skins.
+
 Neon stores manifests/metrics. Blob assets use SHA-256 content-addressed names,
 deduplication and one-year immutable caching. Gameplay loads first, traces
 follow, and recorded images download only on request. First loads still depend

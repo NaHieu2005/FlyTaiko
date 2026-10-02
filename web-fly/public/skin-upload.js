@@ -1,0 +1,35 @@
+const $=id=>document.getElementById(id);
+const images={barRight:'taiko-bar-right',hit:'taikohitcircle',hitOverlay:'taikohitcircleoverlay',big:'taikobigcircle',bigOverlay:'taikobigcircleoverlay',rollMiddle:'taiko-roll-middle',rollEnd:'taiko-roll-end',spinner:'spinner-circle'};
+const sounds={don:'taiko-drum-hitnormal',kat:'taiko-drum-hitclap'};
+const database=new Promise((resolve,reject)=>{const r=indexedDB.open('flytaiko-skins',1);r.onupgradeneeded=()=>r.result.createObjectStore('skins',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});database.catch(()=>{});
+async function player(){for(let i=0;i<200;i++){const p=$('viewer').contentWindow;if(p?.registerRecordedSkin)return p;await new Promise(r=>setTimeout(r,100));}throw Error('Player unavailable');}
+async function install(record){
+ const urls={images:{},sounds:{}};for(const a of record.assets)urls[a.type][a.key]=URL.createObjectURL(new Blob([a.bytes],{type:a.mime}));
+ try{await(await player()).registerRecordedSkin(record.id,urls);}finally{for(const g of Object.values(urls))for(const url of Object.values(g))URL.revokeObjectURL(url);}
+ if(![...$('skin').options].some(o=>o.value===record.id))$('skin').add(new Option(record.name,record.id));
+}
+async function importSkin(files,archive){
+ $('skin-status').textContent='Reading skin…';
+ try{
+  const entries=[];
+  if(archive){if(archive.size>64*1024**2)throw Error('Archive limit: 64 MB');const zip=await JSZip.loadAsync(archive);const members=Object.values(zip.files);if(members.length>2000)throw Error('Too many skin files');for(const item of members)if(!item.dir)entries.push({name:item.name.split('/').pop().toLowerCase(),size:item._data?.uncompressedSize||0,read:()=>item.async('arraybuffer')});}
+  else for(const file of files)entries.push({name:file.name.toLowerCase(),size:file.size,read:()=>file.arrayBuffer()});
+  const assets=[];let total=0;
+  for(const [type,map]of Object.entries({images,sounds}))for(const [key,base]of Object.entries(map)){
+   const names=type==='images'?[base+'@2x.png',base+'.png']:[base+'.ogg',base+'.wav',base+'.mp3'];const e=names.map(n=>entries.find(f=>f.name===n)).find(Boolean);if(!e)continue;
+   if(e.size>8*1024**2)throw Error('Asset limit: 8 MB');const bytes=await e.read();total+=bytes.byteLength;if(bytes.byteLength>8*1024**2||total>40*1024**2)throw Error('Selected assets exceed size limit');
+   assets.push({type,key,bytes,mime:{png:'image/png',ogg:'audio/ogg',wav:'audio/wav',mp3:'audio/mpeg'}[e.name.split('.').pop()]});
+  }
+  if(!assets.some(a=>a.key==='hit'))throw Error('No Taiko hitcircle found');
+  const record={id:'custom-'+crypto.randomUUID(),name:archive?archive.name.replace(/\.(osk|zip)$/i,''):(files[0]?.webkitRelativePath.split('/')[0]||'Custom skin'),assets};
+  await install(record);const db=await database;await new Promise((resolve,reject)=>{const tx=db.transaction('skins','readwrite');tx.objectStore('skins').put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+  $('skin').value=record.id;await $('skin').onchange();$('skin-status').textContent=`${record.name}: ${assets.length} assets saved in this browser.`;
+ }catch(e){$('skin-status').textContent='Skin import failed: '+e.message;}
+}
+$('skin-archive').onchange=e=>{if(e.target.files[0])importSkin(null,e.target.files[0]);};
+$('skin-folder').onchange=e=>{if(e.target.files.length)importSkin(e.target.files,null);};
+database.then(db=>new Promise((resolve,reject)=>{const r=db.transaction('skins').objectStore('skins').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);})).then(async rows=>{
+ for(const row of rows)await install(row);
+ const selected=localStorage.getItem('flytaiko-selected-skin');
+ if(rows.some(row=>row.id===selected)){$('skin').value=selected;await $('skin').onchange();}
+}).catch(e=>{$('skin-status').textContent='Saved skins unavailable: '+e.message;});

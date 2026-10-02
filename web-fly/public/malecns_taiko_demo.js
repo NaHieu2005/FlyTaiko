@@ -237,6 +237,9 @@ async function load(index) {
         if(mine!==version)return;
         game=newGame;trace=null;values=null;
         w.loadRecordedReplay(game,null);w.setVolume(Number($('volume').value));
+        w.setRecordedBackgroundBrightness(Number($('background-brightness').value));
+        w.setRecordedBackground(manifest.background_url ? safePath(manifest.background_url) : null)
+            .catch(error=>{$('status').textContent='Background unavailable: '+error.message;});
         $('seek').max=game.duration_ms;$('seek').value=0;renderMetrics(game.metrics);
         $('clock').textContent=`0:00 / ${timeLabel(game.duration_ms)}`;
         for(const id of ['play','pause','restart','seek'])$(id).disabled=false;
@@ -290,6 +293,7 @@ $('skin').onchange = async () => {
     try {
         const player = await ready;
         await player.setRecordedTaikoSkin(selected);
+        localStorage.setItem('flytaiko-selected-skin',selected);
         const saved = localStorage.getItem('flytaiko-hit-volume-' + selected);
         $('hit-volume').value = saved === null ? '.55' : saved;
         player.setRecordedHitVolume(Number($('hit-volume').value));
@@ -299,6 +303,12 @@ $('skin').onchange = async () => {
         await viewer.contentWindow.setRecordedTaikoSkin('default');
         $('status').textContent = 'Skin load failed: ' + error.message;
     }
+};
+$('background-brightness').value=localStorage.getItem('flytaiko-background-brightness')||'.35';
+$('background-brightness').oninput=async()=>{
+    const value=Number($('background-brightness').value);
+    localStorage.setItem('flytaiko-background-brightness',String(value));
+    (await ready).setRecordedBackgroundBrightness(value);
 };
 $('play').onclick = async () => {
     try {

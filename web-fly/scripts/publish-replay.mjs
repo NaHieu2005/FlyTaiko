@@ -14,7 +14,7 @@ async function digest(file){const hash=createHash('sha256');for await(const chun
 async function upload(name,body,hash){
  const key=`assets/${hash}${extname(name)}`;
  try{return (await head(key,{token})).url;}catch(error){if(error.constructor.name!=='BlobNotFoundError')throw error;}
- const mime={'.json':'application/json','.bin':'application/octet-stream','.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav'}[extname(name)]||'application/octet-stream';
+ const mime={'.json':'application/json','.bin':'application/octet-stream','.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'}[extname(name)]||'application/octet-stream';
  const blob=await put(key,body,{token,access:'public',addRandomSuffix:false,contentType:mime,cacheControlMaxAge:31536000,multipart:true});return blob.url;
 }
 async function asset(path){

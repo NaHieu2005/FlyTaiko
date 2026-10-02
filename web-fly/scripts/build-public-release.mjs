@@ -21,7 +21,7 @@ for (const name of [
     'taiko_viewer.html', 'malecns_taiko_demo.js',
     'fly_taiko_scene.js', 'recorded_taiko_player.js', 'replay_upload.js',
     'TEMPLATE-LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
-    'replay-app.css', 'owner-auth.js',
+    'replay-app.css', 'owner-auth.js', 'skin-upload.js',
 ]) await cp(join(source, name), join(output, name));
 for (const directory of ['vendor', 'data/flybody', 'licenses'])
     await cp(join(source, directory), join(output, directory), {recursive: true});

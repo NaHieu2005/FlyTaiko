@@ -39,7 +39,9 @@ a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cur
 <div class="transport"><button id="play" class="primary" disabled>Play replay</button><button id="pause" disabled>Pause</button><button id="restart" disabled>Restart</button></div>
 <label>Music volume <input id="volume" type="range" min="0" max="1" step=".01" value=".65" aria-label="Music volume"></label>
 <label>Hitsound <input id="hit-volume" type="range" min="0" max="1" step=".01" value=".55" aria-label="Hitsound volume"></label>
+<label>Background brightness <input id="background-brightness" type="range" min="0" max="1" step=".01" value=".35" aria-label="Background brightness"></label>
 </div>
+<details class="skin-import"><summary>Import skin</summary><div class="controls"><label>Skin archive <input id="skin-archive" type="file" accept=".osk,.zip"></label><label>Skin folder <input id="skin-folder" type="file" webkitdirectory multiple></label></div><p id="skin-status" class="subtle">Taiko notes, overlays, lane, spinner and hitsounds. Saved only in this browser.</p></details>
 <p id="status" role="status" aria-live="polite">Loading replay library…</p><div id="metrics" class="metrics-grid"></div></div>
 <div class="player-frame">
 <iframe id="viewer" src="taiko_viewer.html" title="Taiko replay player"></iframe>
@@ -80,4 +82,5 @@ a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cur
 <script type="module" src="replay_upload.js"></script>
 <script type="module" src="malecns_taiko_demo.js?v=20261002-ui2"></script>
 <script type="module" src="fly_taiko_scene.js?v=kat-lean-1"></script>
+<script src="vendor/jszip-3.10.1.min.js"></script><script type="module" src="skin-upload.js"></script>
 </body></html>

@@ -75,6 +75,18 @@ def audio_member(osu_text, chart_name, names):
     return found[0] if len(found) == 1 else None
 
 
+def background_member(osu_text, chart_name, names):
+    match = re.search(r'(?mi)^\s*0\s*,\s*0\s*,\s*"([^"\r\n]+)"', osu_text)
+    if not match:
+        return None
+    candidate = str(PurePosixPath(chart_name).parent / match.group(1).replace('\\', '/'))
+    path = PurePosixPath(candidate)
+    if path.is_absolute() or '..' in path.parts or path.suffix.lower() not in ('.png', '.jpg', '.jpeg', '.webp'):
+        return None
+    found = [name for name in names if name.casefold() == candidate.casefold()]
+    return found[0] if len(found) == 1 else None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--upload', required=True)
@@ -147,6 +159,16 @@ def main():
                                                 'chart_member': chart['member'],
                                                 'audio_member': audio_name}
                 atomic_json(manifest_path, manifest)
+        with ZipFile(archive) as z:
+            name = background_member(text, chart['member'], z.namelist())
+            if name and z.getinfo(name).file_size <= 16 * 1024**2:
+                image = z.read(name)
+                target = destination / ('background' + PurePosixPath(name).suffix.lower())
+                target.write_bytes(image)
+                path = destination / 'manifest.json'
+                manifest = json.loads(path.read_text())
+                manifest['background_url'] = f'demos/{dataset}/{target.name}'
+                atomic_json(path, manifest)
         if os.environ.get('FLYTAIKO_CLOUD_URL'):
             update(folder, status='publishing_cloud', metrics=metrics, dataset=dataset)
             subprocess.run(['node', 'web-fly/scripts/publish-replay.mjs', dataset, str(destination.resolve())], check=True)

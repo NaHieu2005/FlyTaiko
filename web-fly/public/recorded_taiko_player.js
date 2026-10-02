@@ -19,6 +19,36 @@
     let statsDirty = false, needsDraw = true;
     let skinName = 'default', skinSprites = null, hitVolume = .55;
     let skinSounds = null;
+    let mapBackground = null, backgroundBrightness = .35;
+    const customSkins = new Map();
+    window.setRecordedBackground = async url => {
+        const requested = url;
+        window.recordedBackgroundURL = requested;
+        const image = url ? await loadImage(url) : null;
+        if (window.recordedBackgroundURL !== requested) return;
+        mapBackground = image;
+        if (replay && !playing) draw(position);
+    };
+    window.setRecordedBackgroundBrightness = value => {
+        backgroundBrightness = Math.max(0, Math.min(1, Number(value) || 0));
+        if (replay && !playing) draw(position);
+    };
+    window.registerRecordedSkin = async (name, urls) => {
+        const sprites = {};
+        for (const [key,url] of Object.entries(urls.images)) sprites[key] = await loadImage(url);
+        if (!sprites.hit) throw Error('Skin needs taikohitcircle.png or @2x.png');
+        sprites.big ||= sprites.hit;
+        for (const size of ['hit','big']) for (const color of ['don','kat','roll'])
+            sprites[`${size}_${color}`] = tintSprite(sprites[size],color,false);
+        if (sprites.rollMiddle) sprites.rollMiddleTint = tintSprite(sprites.rollMiddle,'roll',false);
+        if (sprites.rollEnd) sprites.rollEndTint = tintSprite(sprites.rollEnd,'roll',false);
+        const sounds = {};
+        for (const [kind,url] of Object.entries(urls.sounds)) {
+            const response = await fetch(url);
+            sounds[kind] = await audioContext.decodeAudioData(await response.arrayBuffer());
+        }
+        customSkins.set(name,{sprites,sounds});
+    };
     const KOISHI_ROOT = 'skins/koishi/';
     const KOISHI_IMAGES = {
         barRight: 'taiko-bar-right.png',
@@ -31,14 +61,15 @@
     function loadImage(path) {
         return new Promise((resolve, reject) => {
             const image = new Image();
-            image.onload = () => resolve(image);
+            image.crossOrigin = 'anonymous';
+            image.onload = () => image.naturalWidth*image.naturalHeight>16000000 ? reject(Error('Image exceeds 16 megapixels')) : resolve(image);
             image.onerror = () => reject(Error(`Skin asset failed: ${path}`));
             image.src = path;
         });
     }
     // The supplied @2x bases have opaque white backgrounds and grey artwork.
     // Remove white before tinting, retaining antialiased edge coverage.
-    function tintSprite(image, color) {
+    function tintSprite(image, color, removeWhite = true) {
         const surface = document.createElement('canvas');
         surface.width = image.naturalWidth; surface.height = image.naturalHeight;
         const paint = surface.getContext('2d');
@@ -47,13 +78,18 @@
         const rgb = color === 'don' ? [240, 75, 88] : color === 'kat' ? [68, 174, 244] : [230, 180, 25];
         for (let i = 0; i < pixels.data.length; i += 4) {
             const darkness = 255 - Math.min(pixels.data[i], pixels.data[i + 1], pixels.data[i + 2]);
-            pixels.data[i + 3] = Math.round(pixels.data[i + 3] * Math.min(1, darkness / 70));
-            pixels.data[i] = rgb[0]; pixels.data[i + 1] = rgb[1]; pixels.data[i + 2] = rgb[2];
+            if(removeWhite) pixels.data[i + 3] = Math.round(pixels.data[i + 3] * Math.min(1, darkness / 70));
+            const shade=removeWhite?1:Math.max(.25,Math.max(pixels.data[i],pixels.data[i+1],pixels.data[i+2])/255);
+            pixels.data[i] = rgb[0]*shade; pixels.data[i + 1] = rgb[1]*shade; pixels.data[i + 2] = rgb[2]*shade;
         }
         paint.putImageData(pixels, 0, 0);
         return surface;
     }
     window.setRecordedTaikoSkin = async function (name) {
+        if (customSkins.has(name)) {
+            const custom = customSkins.get(name); skinSprites = custom.sprites; skinSounds = custom.sounds;
+            skinName = name; schedule(); if (replay && !playing) draw(position); return;
+        }
         if (name !== 'default' && name !== 'koishi') throw Error('Unknown Taiko skin');
         if (name === 'koishi' && !skinSprites) {
             const entries = await Promise.all(Object.entries(KOISHI_IMAGES).map(async ([key, filename]) =>
@@ -99,7 +135,7 @@
         if (!playing || hitVolume <= 0) return;
         const kat = action.action_id === 3 || action.action_id === 4 || action.action_id === 6;
         const kind = kat ? 'kat' : 'don';
-        const buffer = skinName === 'koishi' ? skinSounds?.[kind] :
+        const buffer = (skinName !== 'default' && skinSounds?.[kind]) ||
             (defaultSounds[kind] ||= defaultHitSound(kind));
         if (!buffer) return;
         const voice = audioContext.createBufferSource(), level = audioContext.createGain();
@@ -210,13 +246,13 @@
         }
     }
     function circle(x, radius, color, big = false) {
-        if (skinName === 'koishi' && skinSprites) {
+        if (skinName !== 'default' && skinSprites) {
             // Keep one on-screen note geometry for every selectable skin.
             const size = radius * 2;
             const kind = big ? 'big' : 'hit';
             const ink = color === '#5ab4f0' ? 'kat' : color === '#e6b419' ? 'roll' : 'don';
             ctx.drawImage(skinSprites[`${kind}_${ink}`], x - size / 2, Y - size / 2, size, size);
-            ctx.drawImage(skinSprites[`${kind}Overlay`], x - size / 2, Y - size / 2, size, size);
+            if (skinSprites[`${kind}Overlay`]) ctx.drawImage(skinSprites[`${kind}Overlay`], x - size / 2, Y - size / 2, size, size);
             return;
         }
         ctx.beginPath(); ctx.arc(x, Y, radius, 0, Math.PI * 2);
@@ -241,8 +277,14 @@
     }
     function draw(time) {
         ctx.clearRect(0, 0, 1000, 300);
-        if (skinName === 'koishi' && skinSprites) {
-            ctx.fillStyle = '#130d16'; ctx.fillRect(0, 0, 1000, 300);
+        ctx.fillStyle = '#080b10'; ctx.fillRect(0,0,1000,300);
+        if (mapBackground) {
+            const factor = Math.max(1000/mapBackground.naturalWidth,300/mapBackground.naturalHeight);
+            const w = mapBackground.naturalWidth*factor, h = mapBackground.naturalHeight*factor;
+            ctx.globalAlpha = backgroundBrightness;
+            ctx.drawImage(mapBackground,(1000-w)/2,(300-h)/2,w,h); ctx.globalAlpha = 1;
+        }
+        if (skinName !== 'default' && skinSprites?.barRight) {
             // Keep the uploaded lane texture. Its 180px left drum artwork is
             // deliberately not overlaid on the note path: four keys are shown
             // separately below the lane for this replay player.
@@ -271,7 +313,7 @@
                     const required = longResults.get(note.object_index)?.required || note.required_hits || 1;
                     const progress = Math.min(1, hits / required);
                     ctx.save();
-                    if (skinName === 'koishi' && skinSprites) {
+                    if (skinName !== 'default' && skinSprites?.spinner) {
                         ctx.drawImage(skinSprites.spinner, centre - 76, Y - 76, 152, 152);
                     } else {
                         ctx.fillStyle = 'rgba(145,65,215,.42)'; ctx.strokeStyle = '#eee9ff'; ctx.lineWidth = 5;
@@ -289,7 +331,7 @@
                 if (time > note.end_t + (note.tick_spacing_ms || 0) / 2 || end < HIT - 50 || x > 1060) continue;
                 const left = Math.max(HIT, x), right = Math.min(1060, end);
                 const color = '#e6b419';
-                if (skinName === 'koishi' && skinSprites) {
+                if (skinName !== 'default' && skinSprites?.rollMiddleTint && skinSprites?.rollEndTint) {
                     ctx.fillStyle = color; ctx.fillRect(left, Y - 59, Math.max(0, right - left), 118);
                     ctx.drawImage(skinSprites.rollMiddleTint, left, Y - 59, Math.max(0, right - left), 118);
                     if (end >= HIT && end <= 1060) ctx.drawImage(skinSprites.rollEndTint, end - 59, Y - 59, 59, 118);
