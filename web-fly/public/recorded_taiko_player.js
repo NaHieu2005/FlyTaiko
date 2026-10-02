@@ -38,6 +38,7 @@
         for (const [key,url] of Object.entries(urls.images)) sprites[key] = await loadImage(url);
         if (!sprites.hit) throw Error('Skin needs taikohitcircle.png or @2x.png');
         sprites.big ||= sprites.hit;
+        sprites.bigOverlay ||= sprites.hitOverlay;
         for (const size of ['hit','big']) for (const color of ['don','kat','roll'])
             sprites[`${size}_${color}`] = tintSprite(sprites[size],color,false);
         if (sprites.rollMiddle) sprites.rollMiddleTint = tintSprite(sprites.rollMiddle,'roll',false);
@@ -131,10 +132,19 @@
         return buffer;
     }
     const defaultSounds = {};
+    function playSkinEffect(kind,stamp){
+        if(!playing||skinName==='default'||!skinSounds?.[kind]||hitVolume<=0)return;
+        const voice=audioContext.createBufferSource(),gain=audioContext.createGain();
+        voice.buffer=skinSounds[kind];gain.gain.value=hitVolume;
+        voice.connect(gain);gain.connect(audioContext.destination);
+        voice.start(Math.max(audioContext.currentTime,audioBase+(stamp-clockBase)/(1000*(replay.clock_rate||1))));
+        voice.onended=()=>{voice.disconnect();gain.disconnect();};
+    }
     function playHit(action) {
         if (!playing || hitVolume <= 0) return;
         const kat = action.action_id === 3 || action.action_id === 4 || action.action_id === 6;
-        const kind = kat ? 'kat' : 'don';
+        const target = action.object_index !== undefined ? replay.notes[action.object_index] : replay.notes.find(n=>n.circle_index===action.note_index);
+        const kind = target?.type==='drumroll' ? 'roll' : kat ? 'kat' : 'don';
         const buffer = (skinName !== 'default' && skinSounds?.[kind]) ||
             (defaultSounds[kind] ||= defaultHitSound(kind));
         if (!buffer) return;
@@ -145,6 +155,13 @@
         voice.start(Math.max(audioContext.currentTime, audioBase +
             (action.time_ms - clockBase) / (1000 * (replay.clock_rate || 1))));
         voice.onended = () => { voice.disconnect(); level.disconnect(); };
+        const extra = target?.type?.includes('big') ? (kat ? skinSounds?.whistle || skinSounds?.finish : skinSounds?.finish) : null;
+        if (skinName !== 'default' && extra) {
+            const layer = audioContext.createBufferSource(), gain = audioContext.createGain();
+            layer.buffer=extra; gain.gain.value=hitVolume*.65;layer.connect(gain);gain.connect(audioContext.destination);
+            layer.start(Math.max(audioContext.currentTime,audioBase+(action.time_ms-clockBase)/(1000*(replay.clock_rate||1))));
+            layer.onended=()=>{layer.disconnect();gain.disconnect();};
+        }
     }
 
     // Keep the same approach time as the native 512px observation viewport.
@@ -181,6 +198,7 @@
         while (eventIndex < replay.events.length && replay.events[eventIndex].time_ms <= time) {
             const event = replay.events[eventIndex++];
             counts[event.judgment]++;
+            if(event.judgment==='miss' && combo>0)playSkinEffect('miss',event.time_ms);
             combo = event.judgment === 'miss' ? 0 : combo + 1;
             maxCombo = Math.max(maxCombo, combo);
             if (event.judgment !== 'miss' && Number.isFinite(event.timing_error_ms)) {
@@ -203,6 +221,10 @@
             }
             if (action.judgment === 'swell_tick' || action.judgment === 'drumroll_tick') {
                 longHits.set(action.object_index, (longHits.get(action.object_index) || 0) + 1);
+                if(action.judgment==='swell_tick'){
+                    const need=longResults.get(action.object_index)?.required || replay.notes[action.object_index]?.required_hits;
+                    if(need && longHits.get(action.object_index)===need)playSkinEffect('spinner',action.time_ms);
+                }
                 statsDirty = true;
             } else if (action.judgment === 'ignore' && action.object_index === undefined) {
                 falseHits++; statsDirty = true;
@@ -252,47 +274,65 @@
             const kind = big ? 'big' : 'hit';
             const ink = color === '#5ab4f0' ? 'kat' : color === '#e6b419' ? 'roll' : 'don';
             ctx.drawImage(skinSprites[`${kind}_${ink}`], x - size / 2, Y - size / 2, size, size);
-            if (skinSprites[`${kind}Overlay`]) ctx.drawImage(skinSprites[`${kind}Overlay`], x - size / 2, Y - size / 2, size, size);
+            const beat=60000/(Number(replay.metadata?.bpm)||120);
+            const alternate=combo>=50 && Math.floor(clock()/(beat/(combo>=150?2:1)))%2;
+            const overlay=(alternate && skinSprites[`${kind}Overlay1`]) || skinSprites[`${kind}Overlay`];
+            if (overlay) ctx.drawImage(overlay, x - size / 2, Y - size / 2, size, size);
             return;
         }
         ctx.beginPath(); ctx.arc(x, Y, radius, 0, Math.PI * 2);
         ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
     }
     function drawKeys(time) {
-        // Independent D/F/J/K indicators live above the lane, away from
-        // scrolling notes, the judgment circle and the bottom-left combo.
-        ctx.fillStyle = 'rgba(9,12,20,.9)'; ctx.fillRect(6, 4, 184, 43);
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 17px Segoe UI';
-        for (const [index, key] of ['D', 'F', 'J', 'K'].entries()) {
-            const x = 12 + index * 44, age = time - lastKeyTime[key];
-            const pulse = Math.max(0, 1 - age / 180);
-            ctx.fillStyle = '#242b37'; ctx.fillRect(x, 9, 40, 32);
-            ctx.globalAlpha = .22 + .78 * pulse;
-            ctx.fillStyle = key === 'D' || key === 'K' ? '#389ff5' : '#f35259';
-            ctx.fillRect(x + 2, 11, 36, 28);
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = '#fff'; ctx.fillText(key, x + 20, 26);
+        const x=4,width=96,height=106.7,top=Y-height/2;
+        ctx.save();ctx.beginPath();ctx.rect(x,top,width,height);ctx.clip();
+        if(skinName!=='default' && skinSprites?.barLeft)ctx.drawImage(skinSprites.barLeft,x,top,width,height);
+        else{ctx.fillStyle='#17202c';ctx.fillRect(x,top,width,height);}
+        for (const key of ['D','F','J','K']) {
+            const right=key==='J'||key==='K',kat=key==='D'||key==='K';
+            const pulse=Math.max(0,1-(time-lastKeyTime[key])/150);
+            const sprite=skinName!=='default' && skinSprites?.[kat?'drumOuter':'drumInner'];
+            ctx.save();ctx.globalAlpha=.18+.82*pulse;
+            if(sprite){
+                // Each skin half is mirrored; Don and Kat retain separate inputs.
+                ctx.translate(right?x+width:x,top);if(right)ctx.scale(-1,1);
+                ctx.drawImage(sprite,0,0,width/2,height);
+            }else{
+                ctx.beginPath();ctx.arc(x+width/2,Y,kat?45:30,right?-Math.PI/2:Math.PI/2,right?Math.PI/2:Math.PI*1.5);
+                if(kat){ctx.lineWidth=12;ctx.strokeStyle='#389ff5';ctx.stroke();}
+                else{ctx.closePath();ctx.fillStyle='#f35259';ctx.fill();}
+            }
+            ctx.restore();
         }
-        ctx.textBaseline = 'alphabetic';
+        ctx.restore();
     }
     function draw(time) {
-        ctx.clearRect(0, 0, 1000, 300);
-        ctx.fillStyle = '#080b10'; ctx.fillRect(0,0,1000,300);
+        const height=562.5, laneHeight=146.5, laneTop=Y-laneHeight/2;
+        ctx.setTransform(1.6,0,0,1.6,0,0);
+        ctx.clearRect(0, 0, 1000, height);
+        ctx.fillStyle = '#080b10'; ctx.fillRect(0,0,1000,height);
         if (mapBackground) {
-            const factor = Math.max(1000/mapBackground.naturalWidth,300/mapBackground.naturalHeight);
+            const factor = Math.max(1000/mapBackground.naturalWidth,height/mapBackground.naturalHeight);
             const w = mapBackground.naturalWidth*factor, h = mapBackground.naturalHeight*factor;
             ctx.globalAlpha = backgroundBrightness;
-            ctx.drawImage(mapBackground,(1000-w)/2,(300-h)/2,w,h); ctx.globalAlpha = 1;
+            ctx.drawImage(mapBackground,(1000-w)/2,(height-h)/2,w,h); ctx.globalAlpha = 1;
         }
         if (skinName !== 'default' && skinSprites?.barRight) {
             // Keep the uploaded lane texture. Its 180px left drum artwork is
             // deliberately not overlaid on the note path: four keys are shown
             // separately below the lane for this replay player.
-            ctx.drawImage(skinSprites.barRight, 0, 50, 1000, 200);
+            ctx.drawImage(skinSprites.barRight, HIT, laneTop, 1000-HIT, laneHeight);
         } else {
-            ctx.fillStyle = '#222530'; ctx.fillRect(0, 110, 1000, 80);
+            ctx.fillStyle = '#222530'; ctx.fillRect(0, laneTop, 1000, laneHeight);
             ctx.strokeStyle = '#4b5163'; ctx.lineWidth = 1;
-            for (const y of [110, 190]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
+            for (const y of [laneTop, laneTop+laneHeight]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
+        }
+        const kiai = replay.kiai?.some(([start,end])=>time>=start && time<end);
+        if(kiai){
+            ctx.save();ctx.globalAlpha=.2+.12*Math.sin(time/120);
+            if(skinName!=='default' && skinSprites?.barGlow)ctx.drawImage(skinSprites.barGlow,HIT,laneTop,1000-HIT,laneHeight);
+            else{ctx.fillStyle='#ffd65a';ctx.fillRect(0,laneTop,1000,laneHeight);}
+            ctx.restore();
         }
         ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'right'; ctx.fillStyle = '#aab6c8';
         ctx.fillText('NATIVE SV · RECORDED KEYS', 978, 28);
@@ -399,6 +439,7 @@
         validate(data); window.pauseGame(); generation++; replay = data; audioBuffer = buffer;
         position = 0; resetStats(); longResults = new Map(data.long_results.map(r => [r.object_index, r]));
         document.body.classList.add('recorded-mode'); document.querySelector('h1').textContent = 'FlyTaiko · taiko replay';
+        canvas.width=1600;canvas.height=900;
         if (!$('long-status')) { const el = document.createElement('div'); el.id = 'long-status'; el.className = 'stat-acc'; $('stats-container').append(el); }
         Object.assign(window.taikoState, {kind: 'recorded-male-cns', currentTimeMs: 0,
             replayActions: data.actions, targetFps: 120, displayFps: 0, isPlaying: false});

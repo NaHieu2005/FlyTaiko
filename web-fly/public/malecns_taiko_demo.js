@@ -305,6 +305,7 @@ $('skin').onchange = async () => {
     }
 };
 $('background-brightness').value=localStorage.getItem('flytaiko-background-brightness')||'.35';
+new ResizeObserver(()=>{viewer.style.height=`${Math.max(300,(viewer.clientWidth-40)*9/16+250)}px`;}).observe(viewer.parentElement);
 $('background-brightness').oninput=async()=>{
     const value=Number($('background-brightness').value);
     localStorage.setItem('flytaiko-background-brightness',String(value));

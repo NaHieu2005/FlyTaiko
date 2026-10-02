@@ -72,6 +72,15 @@ compatibility. Brightness and skins affect presentation only, not model input
 or replay judgments. Archive limit is 64 MB, selected asset limit 40 MB and
 individual asset limit 8 MB. Clearing website data removes imported skins.
 
+The player and 3D monitor use 16:9 geometry. Imported drum inner/outer halves
+show independent D/F/J/K inputs beside the judgment target. Re-import older
+saved skins to include newly supported assets. Note overlays support static
+and two-frame variants. Kiai intervals come from native TimingPoints; lane glow
+uses the skin's glow asset when present. Optional finish/whistle, combo-break
+and spinner-completion samples are supported alongside Don/Kat and roll hits.
+Missing samples use the existing fallback where applicable. This is not full
+osu! sample-set/custom per-object sample or storyboard parity.
+
 Neon stores manifests/metrics. Blob assets use SHA-256 content-addressed names,
 deduplication and one-year immutable caching. Gameplay loads first, traces
 follow, and recorded images download only on request. First loads still depend

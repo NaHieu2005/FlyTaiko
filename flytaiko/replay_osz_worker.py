@@ -87,6 +87,30 @@ def background_member(osu_text, chart_name, names):
     return found[0] if len(found) == 1 else None
 
 
+def kiai_intervals(text, duration):
+    section = ''; points = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith('['):
+            section = line
+        elif section == '[TimingPoints]' and line and not line.startswith('//'):
+            parts = line.split(',')
+            if len(parts) >= 8:
+                try:
+                    points.append((float(parts[0]), bool(int(parts[7]) & 1)))
+                except ValueError:
+                    continue
+    intervals = []; start = None
+    for stamp, active in sorted(points, key=lambda point: point[0]):
+        if active and start is None:
+            start = stamp
+        elif not active and start is not None:
+            intervals.append([start, stamp]); start = None
+    if start is not None:
+        intervals.append([start, duration])
+    return intervals
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--upload', required=True)
@@ -144,6 +168,10 @@ def main():
         command = [sys.executable, '-u', '-m', 'flytaiko.prepare_malecns_taiko_demo',
                    '--replay', str(replay), '--public', str(destination), '--no-audio']
         subprocess.run(command, check=True)
+        gameplay_path = destination / 'full-gameplay.json'
+        gameplay = json.loads(gameplay_path.read_text())
+        gameplay['kiai'] = kiai_intervals(text, gameplay['duration_ms'])
+        atomic_json(gameplay_path, gameplay)
         if audio_name:
             with ZipFile(archive) as z:
                 audio = z.read(audio_name)

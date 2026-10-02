@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
-const images={barRight:'taiko-bar-right',hit:'taikohitcircle',hitOverlay:'taikohitcircleoverlay',big:'taikobigcircle',bigOverlay:'taikobigcircleoverlay',rollMiddle:'taiko-roll-middle',rollEnd:'taiko-roll-end',spinner:'spinner-circle'};
-const sounds={don:'taiko-drum-hitnormal',kat:'taiko-drum-hitclap'};
+const images={barLeft:'taiko-bar-left',drumInner:'taiko-drum-inner',drumOuter:'taiko-drum-outer',barRight:'taiko-bar-right',barGlow:'taiko-bar-right-glow',hit:'taikohitcircle',hitOverlay:'taikohitcircleoverlay',hitOverlay1:'taikohitcircleoverlay-1',big:'taikobigcircle',bigOverlay:'taikobigcircleoverlay',bigOverlay1:'taikobigcircleoverlay-1',rollMiddle:'taiko-roll-middle',rollEnd:'taiko-roll-end',spinner:'spinner-circle'};
+const sounds={don:'taiko-drum-hitnormal',kat:'taiko-drum-hitclap',finish:'taiko-drum-hitfinish',whistle:'taiko-drum-hitwhistle',roll:'taiko-drum-hitnormal',spinner:'spinnerbonus',miss:'combobreak'};
 const database=new Promise((resolve,reject)=>{const r=indexedDB.open('flytaiko-skins',1);r.onupgradeneeded=()=>r.result.createObjectStore('skins',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});database.catch(()=>{});
 async function player(){for(let i=0;i<200;i++){const p=$('viewer').contentWindow;if(p?.registerRecordedSkin)return p;await new Promise(r=>setTimeout(r,100));}throw Error('Player unavailable');}
 async function install(record){
@@ -16,7 +16,8 @@ async function importSkin(files,archive){
   else for(const file of files)entries.push({name:file.name.toLowerCase(),size:file.size,read:()=>file.arrayBuffer()});
   const assets=[];let total=0;
   for(const [type,map]of Object.entries({images,sounds}))for(const [key,base]of Object.entries(map)){
-   const names=type==='images'?[base+'@2x.png',base+'.png']:[base+'.ogg',base+'.wav',base+'.mp3'];const e=names.map(n=>entries.find(f=>f.name===n)).find(Boolean);if(!e)continue;
+   const aliases=type==='sounds' && ['don','kat','finish','whistle'].includes(key)?[base,`normal-hit${{don:'normal',kat:'clap',finish:'finish',whistle:'whistle'}[key]}`]:[base];
+   const names=type==='images'?[base+'@2x.png',base+'.png',base+'-0@2x.png',base+'-0.png']:aliases.flatMap(b=>[b+'.ogg',b+'.wav',b+'.mp3']);const e=names.map(n=>entries.find(f=>f.name===n)).find(Boolean);if(!e)continue;
    if(e.size>8*1024**2)throw Error('Asset limit: 8 MB');const bytes=await e.read();total+=bytes.byteLength;if(bytes.byteLength>8*1024**2||total>40*1024**2)throw Error('Selected assets exceed size limit');
    assets.push({type,key,bytes,mime:{png:'image/png',ogg:'audio/ogg',wav:'audio/wav',mp3:'audio/mpeg'}[e.name.split('.').pop()]});
   }
