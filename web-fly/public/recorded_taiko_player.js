@@ -5,7 +5,7 @@
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
     const $ = id => document.getElementById(id);
-    const HIT = 150, Y = 150, SCALE = (1000 - HIT) / (512 - 64);
+    const HIT = 187.5, Y = 231.4453125, SCALE = (1000 - HIT) / (512 - 64);
     const KEY_NAMES = [[], ['F'], ['J'], ['D'], ['K'], ['F', 'J'], ['D', 'K']];
     const COLORS = {great: '#21d6ef', good: '#49e900', miss: '#e5b43f'};
     const legacyStart = window.startGame;
@@ -285,7 +285,7 @@
         ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
     }
     function drawKeys(time) {
-        const x=4,width=96,height=106.7,top=Y-height/2;
+        const x=0,width=132.568359375,height=146.484375,top=Y-height/2;
         ctx.save();ctx.beginPath();ctx.rect(x,top,width,height);ctx.clip();
         if(skinName!=='default' && skinSprites?.barLeft)ctx.drawImage(skinSprites.barLeft,x,top,width,height);
         else{ctx.fillStyle='#17202c';ctx.fillRect(x,top,width,height);}
@@ -293,10 +293,11 @@
             const right=key==='J'||key==='K',kat=key==='D'||key==='K';
             const pulse=Math.max(0,1-(time-lastKeyTime[key])/150);
             const sprite=skinName!=='default' && skinSprites?.[kat?'drumOuter':'drumInner'];
-            ctx.save();ctx.globalAlpha=.18+.82*pulse;
+            ctx.save();ctx.globalAlpha=pulse;
             if(sprite){
                 // Each skin half is mirrored; Don and Kat retain separate inputs.
-                ctx.translate(right?x+width:x,top);if(right)ctx.scale(-1,1);
+                const mirrored=kat?!right:right;
+                ctx.translate(mirrored?x+width/2+(right?width/2:0):x+(right?width/2:0),top);if(mirrored)ctx.scale(-1,1);
                 ctx.drawImage(sprite,0,0,width/2,height);
             }else{
                 ctx.beginPath();ctx.arc(x+width/2,Y,kat?45:30,right?-Math.PI/2:Math.PI/2,right?Math.PI/2:Math.PI*1.5);
@@ -308,7 +309,7 @@
         ctx.restore();
     }
     function draw(time) {
-        const height=562.5, laneHeight=146.5, laneTop=Y-laneHeight/2;
+        const height=562.5, laneHeight=146.484375, laneTop=Y-laneHeight/2, laneLeft=132.568359375;
         ctx.setTransform(1.6,0,0,1.6,0,0);
         ctx.clearRect(0, 0, 1000, height);
         ctx.fillStyle = '#080b10'; ctx.fillRect(0,0,1000,height);
@@ -322,7 +323,7 @@
             // Keep the uploaded lane texture. Its 180px left drum artwork is
             // deliberately not overlaid on the note path: four keys are shown
             // separately below the lane for this replay player.
-            ctx.drawImage(skinSprites.barRight, HIT, laneTop, 1000-HIT, laneHeight);
+            ctx.drawImage(skinSprites.barRight, laneLeft, laneTop, 1000-laneLeft, laneHeight);
         } else {
             ctx.fillStyle = '#222530'; ctx.fillRect(0, laneTop, 1000, laneHeight);
             ctx.strokeStyle = '#4b5163'; ctx.lineWidth = 1;
@@ -331,7 +332,7 @@
         const kiai = replay.kiai?.some(([start,end])=>time>=start && time<end);
         if(kiai){
             ctx.save();ctx.globalAlpha=.2+.12*Math.sin(time/120);
-            if(skinName!=='default' && skinSprites?.barGlow)ctx.drawImage(skinSprites.barGlow,HIT,laneTop,1000-HIT,laneHeight);
+            if(skinName!=='default' && skinSprites?.barGlow)ctx.drawImage(skinSprites.barGlow,laneLeft,laneTop,1000-laneLeft,laneHeight);
             else{ctx.fillStyle='#ffd65a';ctx.fillRect(0,laneTop,1000,laneHeight);}
             ctx.restore();
         }
@@ -343,7 +344,7 @@
             if (note.circle_index !== undefined) {
                 if (time >= note.judged_at_ms || x < -90 || x > 1090) continue;
                 const big = note.type.includes('big');
-                circle(x, big ? 45 : 30, note.type.startsWith('kat') ? '#5ab4f0' : '#f05a5a', big);
+                circle(x, big ? 60.5 : 43.2, note.type.startsWith('kat') ? '#5ab4f0' : '#f05a5a', big);
             } else {
                 const end = noteX(note, time, true);
                 if (note.type === 'swell') {

@@ -16,11 +16,12 @@ async function importSkin(files,archive){
  $('skin-status').textContent='Reading skin…';
  try{
   const entries=[];
-  if(archive){if(archive.size>64*1024**2)throw Error('Archive limit: 64 MB');const zip=await JSZip.loadAsync(archive);const members=Object.values(zip.files);if(members.length>2000)throw Error('Too many skin files');for(const item of members)if(!item.dir)entries.push({name:item.name.split('/').pop().toLowerCase(),size:item._data?.uncompressedSize||0,read:()=>item.async('arraybuffer')});}
-  else for(const file of files)entries.push({name:file.name.toLowerCase(),size:file.size,read:()=>file.arrayBuffer()});
+  if(archive){if(archive.size>64*1024**2)throw Error('Archive limit: 64 MB');const zip=await JSZip.loadAsync(archive);const members=Object.values(zip.files);if(members.length>2000)throw Error('Too many skin files');for(const item of members)if(!item.dir)entries.push({name:item.name.split('/').pop().toLowerCase(),path:item.name.toLowerCase(),size:item._data?.uncompressedSize||0,read:()=>item.async('arraybuffer')});}
+  else for(const file of files)entries.push({name:file.name.toLowerCase(),path:(file.webkitRelativePath||file.name).toLowerCase(),size:file.size,read:()=>file.arrayBuffer()});
+  entries.sort((a,b)=>Number(/(^|\/)taiko\//.test(b.path))-Number(/(^|\/)taiko\//.test(a.path)));
   const assets=[];let total=0;
   for(const [type,map]of Object.entries({images,sounds}))for(const [key,base]of Object.entries(map)){
-   const aliases=type==='sounds' && ['don','kat','finish','whistle'].includes(key)?[base,`normal-hit${{don:'normal',kat:'clap',finish:'finish',whistle:'whistle'}[key]}`]:[base];
+   const aliases=[base]; // Never substitute osu!standard normal-hit* samples.
    const names=type==='images'?[base+'@2x.png',base+'.png',base+'-0@2x.png',base+'-0.png']:aliases.flatMap(b=>[b+'.ogg',b+'.wav',b+'.mp3']);const e=names.map(n=>entries.find(f=>f.name===n)).find(Boolean);if(!e)continue;
    if(e.size>8*1024**2)throw Error('Asset limit: 8 MB');const bytes=await e.read();total+=bytes.byteLength;if(bytes.byteLength>8*1024**2||total>40*1024**2)throw Error('Selected assets exceed size limit');
    assets.push({type,key,bytes,mime:{png:'image/png',ogg:'audio/ogg',wav:'audio/wav',mp3:'audio/mpeg'}[e.name.split('.').pop()]});

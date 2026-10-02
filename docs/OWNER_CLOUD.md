@@ -82,6 +82,10 @@ uses the skin's glow asset when present. Optional finish/whistle, combo-break
 and spinner-completion samples are supported alongside Don/Kat and roll hits.
 Missing samples use the existing fallback where applicable. This is not full
 osu! sample-set/custom per-object sample or storyboard parity.
+Don/Kat imports use `taiko-drum-hit*` exclusively, never standard `normal-hit*`.
+Assets in a skin's `taiko/` subfolder take priority. Re-import to replace any
+previously saved standard-sample fallback. Drum idle artwork is shown once;
+individual skin drum halves light only when their recorded key is pressed.
 
 Neon stores manifests/metrics. Blob assets use SHA-256 content-addressed names,
 deduplication and one-year immutable caching. Gameplay loads first, traces

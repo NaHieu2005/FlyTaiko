@@ -257,15 +257,15 @@ async function start() {
         new THREE.MeshBasicMaterial({map: screenTexture, toneMapped: false}));
     screen.position.set(0, .35, -.521); scene.add(screen);
     // Explicit judgment target on the monitor itself (x=150 of 1000 lane px).
-    const hitX = -1.18 / 2 + 1.18 * 150 / 1000;
+    const hitX = -1.18 / 2 + 1.18 * 187.5 / 1000;
     const targetRing = new THREE.Mesh(new THREE.RingGeometry(.043, .052, 48),
         new THREE.MeshBasicMaterial({color: 0xf0f7ff, transparent: true, opacity: .95,
             side: THREE.DoubleSide, toneMapped: false}));
-    targetRing.position.set(hitX, .35+1.18*9/16*(.5-150/562.5), -.511); scene.add(targetRing);
+    targetRing.position.set(hitX, .35+1.18*9/16*(.5-231.4453125/562.5), -.511); scene.add(targetRing);
     const targetGlow = new THREE.Mesh(new THREE.RingGeometry(.054, .058, 48),
         new THREE.MeshBasicMaterial({color: 0x6fd9ff, transparent: true, opacity: .45,
             side: THREE.DoubleSide, toneMapped: false}));
-    targetGlow.position.set(hitX, .35+1.18*9/16*(.5-150/562.5), -.510); scene.add(targetGlow);
+    targetGlow.position.set(hitX, .35+1.18*9/16*(.5-231.4453125/562.5), -.510); scene.add(targetGlow);
 
     const pads = {};
     for (const [name, color] of [
