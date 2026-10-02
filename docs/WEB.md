@@ -14,6 +14,8 @@ The server runs inference, not additional training. Closing the tab does not
 stop generation; reopening restores the pending job.
 
 Limits: 128 MB uploads, charts under ten minutes, one GPU job at a time.
+The service also applies a global budget of 12 uploads per 15 minutes and a
+120-second socket inactivity timeout. These are basic safeguards, not user authentication.
 Upload only maps and music you have permission to share.
 
 ## Database and files
@@ -47,3 +49,20 @@ HTTPS separately. Set Vercel root to `web-fly`, use `vercel.json`, and configure
 Before public exposure add reverse-proxy authentication, TLS, per-user rate
 limits and timeouts. The one-job guard is not an authenticated multi-user queue.
 Weights, uploads, music and generated assets are excluded from Git.
+
+### Current preview deployment
+
+Frontend: https://flytaiko.vercel.app/. It has been smoke-tested through the
+public site: OSZ upload, v25 GPU inference, automatic playback and saved library.
+The GPU service runs in tmux on port 8010 (`flytaiko_release_web`). A separate
+tmux session (`flytaiko_public_tunnel`) keeps a Cloudflare Quick Tunnel alive.
+This is a preview, not a durable production backend: Quick Tunnel addresses
+change on restart and have no production uptime guarantee. Replace it with a
+named tunnel or a stable HTTPS GPU host before advertising a permanent service.
+When the backend URL changes, update `FLYTAIKO_BACKEND_URL` in Vercel and redeploy.
+
+Git auto-deploy is not connected yet: grant the Vercel GitHub App access to the
+private `NaHieu2005/FlyTaiko` repository and set the Git project root to `web-fly`.
+The current deployment was made from that directory using Vercel CLI. Until Git
+is connected, deploy from `web-fly` using `vercel deploy --prod --scope nahieu2005`.
+Keep deployment protection for previews; the production alias is publicly readable.

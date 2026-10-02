@@ -1,5 +1,6 @@
 """Static FlyTaiko site and bounded OSZ replay jobs on a separate GPU host."""
 import argparse
+from collections import deque
 import hashlib
 import gzip
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from urllib.parse import urlsplit
 from zipfile import ZipFile, BadZipFile
@@ -33,6 +35,19 @@ IDENTIFIER = re.compile(r'^[a-f0-9]{12}$')
 ALLOWED_ORIGINS = {origin.rstrip('/') for origin in
                    os.environ.get('FLYTAIKO_ALLOWED_ORIGINS', '').split(',') if origin.strip()}
 MIN_FREE_BYTES = 5 * 1024**3
+UPLOAD_TIMES = deque()
+
+
+def allow_upload():
+    """A global budget also bounds requests with spoofed source addresses."""
+    now = time.monotonic()
+    with LOCK:
+        while UPLOAD_TIMES and UPLOAD_TIMES[0] < now - 900:
+            UPLOAD_TIMES.popleft()
+        if len(UPLOAD_TIMES) >= 12:
+            return False
+        UPLOAD_TIMES.append(now)
+        return True
 
 
 def chart_entries(archive):
@@ -113,6 +128,10 @@ def replay_library():
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(120)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(PUBLIC), **kwargs)
 
@@ -194,6 +213,8 @@ class Handler(SimpleHTTPRequestHandler):
             if length < 1 or length > MAX_UPLOAD:
                 return self.respond(413, {'error': 'Upload must be 1 byte to 128 MB'})
             if self.path == '/api/osz':
+                if not allow_upload():
+                    return self.respond(429, {'error': 'Upload limit reached: 12 uploads per 15 minutes. Try later.'})
                 if shutil.disk_usage(JOBS).free < MIN_FREE_BYTES + length:
                     return self.respond(507, {'error': 'Insufficient disk space for another upload'})
                 if self.headers.get('Content-Type', '').split(';')[0] != 'application/octet-stream':

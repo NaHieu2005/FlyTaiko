@@ -1,0 +1,7 @@
+public/demos
+public/beatmaps
+public/skins
+dist-public
+node_modules
+.git
+*.log

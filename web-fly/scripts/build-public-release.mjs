@@ -20,8 +20,9 @@ for (const name of [
     'index.html', 'malecns-taiko.html', 'create-replay.html',
     'taiko_viewer.html', 'malecns_taiko_demo.js',
     'fly_taiko_scene.js', 'recorded_taiko_player.js', 'replay_upload.js',
+    'TEMPLATE-LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
 ]) await cp(join(source, name), join(output, name));
-for (const directory of ['vendor', 'data/flybody'])
+for (const directory of ['vendor', 'data/flybody', 'licenses'])
     await cp(join(source, directory), join(output, directory), {recursive: true});
 await writeFile(join(output, 'runtime-config.js'),
                 `window.FLYTAIKO_BACKEND_URL = ${JSON.stringify(backend)};\n`);
