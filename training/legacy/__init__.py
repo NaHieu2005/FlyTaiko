@@ -1,1 +1,0 @@
-"""FlyTaiko source package."""

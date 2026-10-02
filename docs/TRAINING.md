@@ -15,7 +15,7 @@ weights are not distributed in Git. Load trusted PyTorch checkpoints only.
 | `runs/malecns_v23_full/config.json` | Reference sensory configuration |
 
 Rows include parsed metadata, notes, timing and scroll information. Consult
-`training.v25.train_full.prepare()` and `training.v23.train_full.entries()` for the schema.
+`training.v25.train_full.prepare()` and `training.common.campaign_helpers.entries()` for the schema.
 A fresh checkout cannot train until these manifests and the graph are provided.
 `models/v25/config.json` is a reference; preserve verified splits and metadata.
 

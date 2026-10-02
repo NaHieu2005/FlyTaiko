@@ -58,9 +58,7 @@ container recipe is in [CLOUD.md](docs/CLOUD.md).
 flytaiko/           Runtime, measured brain, policy, rendering and replay API
 training/
   v25/             Current fresh-cache A/C campaign
-  v23/             Historical campaign and v23/v24 spinner finetuning
-  common/          Cache workers, fingerprints and split tools
-  legacy/          Early campaign dependencies
+  common/          Shared campaign helpers, cache workers and split tools
 taiko/             Native parser, objects and environment
 flyconnectome/     Early connectome simulation dependencies
 models/v25/        Selected model configuration and evaluation metadata
@@ -72,8 +70,8 @@ tests/             Logic, export and catalogue checks
 
 Run `python -m training.v25.train_full` from the repository root. Training
 requires the original song-disjoint dataset manifests, provided separately.
-v25 reuses methods from v23, so historical code is retained in version folders
-rather than deleted. See [training versions](training/README.md).
+Reusable methods are consolidated in `training/common`; old version directories
+are removed. See [training layout](training/README.md).
 
 ## Checks
 

@@ -18,7 +18,7 @@ import torch
 
 from flytaiko.neural_system import NeuralConfig, NeuralRuntime, JsonBeatmap, seed_all
 from flytaiko.neural_game import Game, Observation, PROFILES, metrics
-from training.legacy.train_campaign import select_short_campaign
+from training.common.short_campaign_helpers import select_short_campaign
 
 
 def log(root, record):

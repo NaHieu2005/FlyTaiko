@@ -1,4 +1,4 @@
-"""Resumable full v23 campaign on high-resolution measured sensory activity.
+"""Shared sensory-memory campaign helpers used by the current v25 trainer.
 
 Two 8-second clips per source chart keep float32 neural caches within disk
 budget. Chart data supplies only expert labels; inference remains visual.

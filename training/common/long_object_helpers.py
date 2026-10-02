@@ -1,4 +1,4 @@
-"""Fine-tune selected v23 Phase C on native spinner clips, preserving old best.
+"""Shared long-object clip helpers used by the current v25 trainer.
 
 All optimization clips come from A/C/bonus/augmented training songs. Normal and
 slow-SV validation remain disjoint; the original Phase C checkpoint is never
@@ -18,7 +18,7 @@ from training.common.cache_parallel import cache_parallel, missing_indices
 from flytaiko.malecns_training import excerpt
 from flytaiko.neural_campaign import atomic_json
 from flytaiko.sensory_temporal_policy import SensoryTemporalPolicy
-from training.v23.train_full import (BASE, BONUS, LOW, ROOT as FULL, entries, load_best,
+from training.common.campaign_helpers import (BASE, BONUS, LOW, ROOT as FULL, entries, load_best,
                             objective, read, train_epoch)
 from flytaiko.warm_validation import WarmValidationEngine, contextual_probes
 

@@ -1,4 +1,4 @@
-"""Managed A -> gated B campaign with song-disjoint data and metric logs."""
+"""Shared short campaign selection and historical utility implementation."""
 import argparse
 import json
 import random

@@ -16,9 +16,9 @@ import torch
 from training.common.cache_parallel import cache_parallel, missing_indices
 from flytaiko.malecns_training import song_key
 from flytaiko.neural_campaign import atomic_json
-from training.v23.train_full import (BASE, BONUS, LOW, calibrate, clips, entries,
+from training.common.campaign_helpers import (BASE, BONUS, LOW, calibrate, clips, entries,
                             load_best, objective, read, train_epoch)
-from training.v23.spinner_finetune import selected_long_clips
+from training.common.long_object_helpers import selected_long_clips
 from flytaiko.warm_validation import WarmValidationEngine, contextual_probes
 
 
