@@ -8,11 +8,11 @@ weights are not distributed in Git. Load trusted PyTorch checkpoints only.
 
 | Path | Content |
 | --- | --- |
-| `runs/malecns_v18_osu_sv_campaign/split.json` | A:100 maps, C:50, normal validation/test |
-| `runs/malecns_v18_bonus_cache/rows.json` | 22 bonus maps |
-| `runs/malecns_v20_low_sv_augmentation/rows.json` | 30 additional slow-SV variants |
+| `runs/dataset_metadata/base/split.json` | A:100 maps, C:50, normal validation/test |
+| `runs/dataset_metadata/bonus/rows.json` | 22 bonus maps |
+| `runs/dataset_metadata/low_sv/rows.json` | 30 additional slow-SV variants |
 | same directory: `validation_rows.json`, `test_rows.json` | 8 slow-SV maps each |
-| `runs/malecns_v23_full/config.json` | Reference sensory configuration |
+| `runs/dataset_metadata/reference_config.json` | Reference sensory configuration |
 
 Rows include parsed metadata, notes, timing and scroll information. Consult
 `training.v25.train_full.prepare()` and `training.common.campaign_helpers.entries()` for the schema.
@@ -39,6 +39,12 @@ Monitor normal and slow-SV Great/Good/Miss, false hits, signed timing error and
 spinner completion, not loss alone. Do not tune using test results. Inspect
 `runs/malecns_v25_full/result.json` and the selected checkpoint before publishing.
 Low loss does not guarantee SS or unseen-map generalization.
+
+On the maintained workstation, the completed original v25 run is preserved at
+`runs/v25_completed_training`; its caches were retired. The active model is
+still `models/v25/policy.pt`. Refactored source hashes intentionally prevent
+resuming old optimizer/cache state under changed code. New preflight metadata
+uses `runs/malecns_v25_full`; do not bypass compatibility checks to resume.
 
 ## Publish
 

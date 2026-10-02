@@ -32,7 +32,7 @@ def sha(path):
 
 
 def prepare():
-    config = read(Path('runs/malecns_v23_full/config.json'))
+    config = read(Path('runs/dataset_metadata/reference_config.json'))
     config.update(architecture='malecns-image-motor-v25-full-purple-spinner',
                   observation_style='web-native-purple-spinner',
                   phase_plan='A:100 base+22 bonus+30 low-SV; C:50; 2 circle clips/map plus native spinner clips',
@@ -40,7 +40,7 @@ def prepare():
     config['source_hashes'] = {name: sha(name) for name in (
         'flytaiko/malecns_training.py', 'flytaiko/sensory_readout.py', 'flytaiko/sensory_temporal_policy.py',
         'flytaiko/highres_taiko.py', 'training/common/cache_parallel.py', 'flytaiko/warm_validation.py',
-        'training/v23/train_full.py', 'training/v23/spinner_finetune.py', 'training/v25/train_full.py')}
+        'training/common/campaign_helpers.py', 'training/common/long_object_helpers.py', 'training/v25/train_full.py')}
     split = read(BASE / 'split.json')
     bonus = read(BONUS / 'rows.json')
     augmented = read(LOW / 'rows.json')

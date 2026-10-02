@@ -21,9 +21,9 @@ from flytaiko.warm_validation import WarmValidationEngine, contextual_probes
 
 
 ROOT = Path('runs/malecns_v23_full')
-BASE = Path('runs/malecns_v18_osu_sv_campaign')
-BONUS = Path('runs/malecns_v18_bonus_cache')
-LOW = Path('runs/malecns_v20_low_sv_augmentation')
+BASE = Path('runs/dataset_metadata/base')
+BONUS = Path('runs/dataset_metadata/bonus')
+LOW = Path('runs/dataset_metadata/low_sv')
 PILOT = Path('runs/malecns_v23_sensory_memory_pilot')
 CIRCLE = {'don', 'kat', 'don_big', 'kat_big'}
 
