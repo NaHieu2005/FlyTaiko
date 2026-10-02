@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlyTaiko · Tạo replay từ OSZ</title>
+<style>
+body{background:#12151d;color:#e8edf5;font:16px system-ui;margin:30px auto;max-width:760px;padding:0 18px}
+h1{font-size:27px}p{line-height:1.6;color:#b9c9db}a{color:#89c9ee}
+.panel{background:#1b2230;border:1px solid #3d4b64;border-radius:12px;padding:20px;margin:20px 0}
+label{display:block;margin:14px 0}input,select,button{font:inherit}input[type=file],select{display:block;width:100%;margin-top:8px}
+select,button{background:#303d56;color:#fff;border:1px solid #556787;border-radius:7px;padding:10px}
+button{cursor:pointer}button:disabled{opacity:.5;cursor:default}#status{white-space:pre-wrap;color:#a9dcee}
+progress{width:100%;height:18px}#result{font-size:18px}
+</style></head><body>
+<p><a href="malecns-taiko.html">← Quay lại replay</a></p>
+<h1>Tạo replay Taiko từ file .osz</h1>
+<p>Chọn file .osz của bạn, sau đó chọn difficulty Taiko và checkpoint. Mỗi job chạy nguyên bài và có thể mất nhiều phút; không dùng chart để train thêm.</p>
+<div class="panel">
+<label>File beatmap .osz<input id="file" type="file" accept=".osz,application/zip"></label>
+<button id="upload">Tải lên và đọc difficulty</button>
+<progress id="progress" max="100" value="0" hidden></progress>
+<label>Difficulty Taiko<select id="chart" disabled><option>Chưa tải file</option></select></label>
+<label>Mods<select id="mods"><option value="NM">No Mod</option><option value="HR">Hard Rock (osu!stable Taiko, 16:9)</option><option value="DT">Double Time (1.5×)</option><option value="DTHR">Double Time + Hard Rock</option></select></label>
+<label>Model<select id="model"><option value="v25">v25 Phase C</option></select></label>
+<button id="generate" disabled>Tạo replay</button>
+<p id="status" role="status">Sẵn sàng.</p>
+<p id="result"></p>
+</div>
+<p>Giới hạn: file tối đa 128 MB, map dưới 10 phút, một job GPU mỗi lần. File bạn gửi được lưu trên server để tạo replay; chỉ tải lên beatmap bạn có quyền chia sẻ. Nếu .osz có nhạc được chart tham chiếu, replay sẽ kèm nhạc.</p>
+<script src="runtime-config.js"></script>
+<script>
+const $=id=>document.getElementById(id); let uploadId=null,timer=null;
+const backend=path=>window.FLYTAIKO_BACKEND_URL ? new URL(path.replace(/^\/+/, ''), window.FLYTAIKO_BACKEND_URL.replace(/\/+$/, '')+'/').href : path;
+function status(value){$('status').textContent=value}
+function error(value){status('Lỗi: '+value)}
+async function readResponse(response){const body=await response.json();if(!response.ok)throw Error(body.error||`HTTP ${response.status}`);return body}
+$('upload').onclick=()=>{
+  const file=$('file').files[0];if(!file)return error('Hãy chọn file .osz');
+  if(!file.name.toLowerCase().endsWith('.osz')||file.size>128*1024*1024)return error('Cần file .osz tối đa 128 MB');
+  $('upload').disabled=true;$('generate').disabled=true;$('progress').hidden=false;$('progress').value=0;
+  status('Đang tải file lên server…');
+  const xhr=new XMLHttpRequest();xhr.open('POST',backend('/api/osz'));xhr.setRequestHeader('Content-Type','application/octet-stream');
+  xhr.upload.onprogress=e=>{if(e.lengthComputable)$('progress').value=Math.round(e.loaded/e.total*100)};
+  xhr.onerror=()=>{error('Không kết nối được server');$('upload').disabled=false};
+  xhr.onload=()=>{try{
+    const body=JSON.parse(xhr.responseText);if(xhr.status!==200)throw Error(body.error||`HTTP ${xhr.status}`);
+    uploadId=body.upload_id;$('chart').replaceChildren();body.charts.forEach((c,i)=>$('chart').add(new Option(`${c.artist} - ${c.title} [${c.version}] · ${c.notes} note · ${(c.duration_ms/1000).toFixed(0)} s`,i)));
+    $('chart').disabled=false;$('generate').disabled=false;status(`Đã đọc ${body.charts.length} difficulty Taiko. Chọn một bản rồi tạo replay.`);
+  }catch(e){error(e.message)}finally{$('upload').disabled=false}};
+  xhr.send(file);
+};
+$('generate').onclick=async()=>{
+  if(!uploadId)return error('Hãy tải .osz trước');
+  $('generate').disabled=true;$('result').replaceChildren();status('Đang tạo job…');
+  try{
+    const response=await fetch(backend('/api/replays'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({upload_id:uploadId,chart_index:Number($('chart').value),mods:$('mods').value,model:$('model').value})});
+    const job=await readResponse(response);status('Job đã tạo. Đang chờ GPU…');
+    localStorage.setItem('flytaiko-replay-job',job.job_id);
+    clearInterval(timer);timer=setInterval(()=>poll(job.job_id),5000);poll(job.job_id);
+  }catch(e){error(e.message);$('generate').disabled=false}
+};
+async function poll(id){try{
+  const response=await fetch(backend(`/api/replays/${id}`),{cache:'no-store'});const job=await readResponse(response);
+  const progress=job.progress_frames?` · ${job.progress_frames} frame` : '';
+  status(`Job ${id}: ${job.status}${progress}`);
+  if(job.status==='complete'){
+    clearInterval(timer);$('result').innerHTML=`<a href="${job.url}">Mở replay đã tạo →</a> · ${job.metrics.great} Great, ${job.metrics.good} Good, ${job.metrics.miss} Miss`;
+    $('generate').disabled=false;
+  }else if(job.status==='failed'){
+    clearInterval(timer);error(job.error||'Job thất bại; xem log server');$('generate').disabled=false;
+  }
+}catch(e){error(e.message)}}
+const previous=localStorage.getItem('flytaiko-replay-job');if(previous&&/^[a-f0-9]{12}$/.test(previous)){timer=setInterval(()=>poll(previous),5000);poll(previous)}
+</script></body></html>

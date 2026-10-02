@@ -1,0 +1,82 @@
+{
+  "architecture": "malecns-image-motor-v25-full-purple-spinner",
+  "seed": 42,
+  "batch": 8,
+  "gain": 0.01,
+  "tonic": 8.0,
+  "retina_bounds": [
+    0.08008008008008008,
+    0.2508361204013378,
+    1.0,
+    0.7525083612040134
+  ],
+  "retina_bilinear": true,
+  "neuron_model": "graded-rate engineering hypothesis",
+  "rate_coupling": 0.95,
+  "weight_transform": "signed measured contacts / incoming absolute sum * .95",
+  "input_nodes": "photoreceptor activation externally driven by RGB; no input-node synaptic feedback",
+  "motor_interface": "continuous_modes",
+  "training_label_policy": "circle onset <=12ms before target; 8ms consistent evidence before actuation; sustained native long-object modes",
+  "frame_interval_ms": 8.0,
+  "model_sampling_hz": 125.0,
+  "presentation_fps_cap": 120,
+  "validation_objective": "equal normal/low-SV domain scores with miss and false-hit penalty",
+  "smoke": false,
+  "retina": "RGB 1000x300 web-native Taiko rendered before measured photoreceptor sampling",
+  "connectome": "MaleCNS v1.0, Traced, measured edges",
+  "neurons": 165122,
+  "decoder": "measured photoreceptor + directly connected optic lobe + motor features; causal GRU",
+  "interface": "probability hysteresis + deterministic per-color hand alternation",
+  "synapse_backend": "fixed-tree CSR Triton, no atomic reduction",
+  "motor_precision": "float32 live and cache; weak neural responses are retained",
+  "cache_dtype": "float32",
+  "tonic_scope": "photo_targets",
+  "body_tonic": 6.5,
+  "photo_tonic": 0.0,
+  "warmup_ms": 512.0,
+  "scale_floor": 1e-07,
+  "legacy_lif_parameters_unused": [
+    "gain",
+    "tonic",
+    "tonic_scope",
+    "body_tonic",
+    "photo_tonic"
+  ],
+  "decoder_hidden": 128,
+  "decoder_dropout": 0.1,
+  "class_weights": [
+    1,
+    2,
+    2,
+    6,
+    6,
+    2,
+    2
+  ],
+  "pilot_songs": 32,
+  "phase_plan": "A:100 base+22 bonus+30 low-SV; C:50; 2 circle clips/map plus native spinner clips",
+  "cache_workers": 2,
+  "graph_hashes": {
+    "body-annotations-male-cns-v1.0-minconf-0.5.feather": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "body-neurotransmitters-male-cns-v1.0.feather": "95c9289220663abeb3409f3ad9e5a7f8a53f8093f5139d15502cd08da8879621",
+    "connectome-weights-male-cns-v1.0-minconf-0.5.feather": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1"
+  },
+  "source_hashes": {
+    "malecns_training.py": "9db6123ce635f0a0f3df29161c3d332e9d230df29f0333620165e5b8667a8ecd",
+    "sensory_readout.py": "6ce1ff57f76a0040d5173aec5530b89cbbb17e40d5adfd805a4a6b791df454e2",
+    "sensory_temporal_policy.py": "aff6b7e8f21386ac4d39db397949400a1796dc79e568351996ed4ac4e927d375",
+    "highres_taiko.py": "6f25fa671a9fab9eabe4536033307e84a402adf59f1fb29cddf545effe3d9433",
+    "malecns_cache_parallel.py": "6c8b9b68ef117a1a9a8de718d56ce4d6176811c233259db5862c1e141bfe84ee",
+    "warm_validation.py": "5e7a7f2aae6729c98a6928acf9718a9653296060785020d70c84c8adac25fab9",
+    "train_v23_full.py": "ef178fee4e70c583b83ff208f9522465e35469f0453f74c923a9b193983e0f20",
+    "train_v23_spinner_finetune.py": "cf1d5a46ae1fddcf17a8365a3352b2ff08d393ec657ec0da907d319b6ee524cf",
+    "train_v25_full.py": "d700f07adcdb15c887b6cfeca7025a99644c36b641ea32770f944c061f78c95c"
+  },
+  "observation_style": "web-native-purple-spinner",
+  "retina_x_warp": [
+    0.7,
+    0.2502502502502503
+  ],
+  "motor_delta_lag_frames": 20,
+  "decoder_input": "sensory_memory"
+}

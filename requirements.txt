@@ -1,0 +1,8 @@
+# Reproducible GPU core. See requirements-gpu-cu124.lock for the tested lock.
+numpy==2.1.3
+scipy==1.14.1
+torch==2.5.1
+tqdm==4.67.1
+pyarrow==19.0.1
+pandas==2.2.3
+triton==3.1.0

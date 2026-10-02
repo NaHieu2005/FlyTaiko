@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlyTaiko · Taiko replay + MaleCNS</title>
+<style>
+*{box-sizing:border-box}body{background:#12151d;color:#e8edf5;font:16px system-ui;margin:24px auto;max-width:1150px;padding:0 16px}
+h1{font-size:26px;margin:0 0 8px}h2{font-size:18px;margin:0 0 12px}p{line-height:1.6}.subtle{color:#a5b2c7;font-size:14px}
+button,select{font:inherit;color:inherit;background:#303d56;border:1px solid #455572;border-radius:8px;padding:10px 18px}button{cursor:pointer}button:hover{background:#3d4d6d}button:disabled,input:disabled{opacity:.4;cursor:default}
+.controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.controls select{flex:1;min-width:220px;max-width:570px}label{display:flex;align-items:center;gap:8px;font-size:14px}
+#status{min-height:25px;margin:12px 0;color:#a9dcee}#metrics{margin:0 0 14px}.panel{background:#171b25;border:1px solid #34415a;border-radius:12px;overflow:hidden}
+iframe{display:block;width:100%;height:555px;border:0}#timeline{display:flex;gap:12px;align-items:center;padding:12px 18px;border-top:1px solid #34415a}#seek{flex:1;min-width:0;accent-color:#69b6e6}#clock{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:14px}
+.input-panel{margin-top:20px;padding:18px}.input-panel h2{margin-bottom:5px}#model-input,#retina-input{display:block;width:100%;height:auto;background:#080b10;image-rendering:pixelated;border:1px solid #445572;border-radius:4px}#model-input{max-width:1024px;aspect-ratio:512/96}#retina-input{max-width:685px;aspect-ratio:137/53}.retina-label{margin:16px 0 6px}#input-status{margin:8px 0 0}
+.fly-panel{margin-top:20px;padding:18px}.fly-panel h2{margin-bottom:8px}#fly-stage{position:relative;width:100%;height:490px;background:#111827;border-radius:8px;overflow:hidden;touch-action:none}#fly-stage>canvas{display:block;width:100%;height:100%}#fly-status{margin:8px 0 0}
+#fly-stage:fullscreen{width:100vw;height:100vh;border-radius:0}#fly-overlay{position:absolute;inset:0;z-index:4;pointer-events:none;color:#eaf4ff;font:13px system-ui}#fly-overlay .hud-box{background:rgba(8,14,25,.82);border:1px solid rgba(122,177,228,.48);box-shadow:0 8px 25px #0008;border-radius:8px;backdrop-filter:blur(5px)}
+#fly-hud{position:absolute;top:14px;left:14px;padding:10px 13px;min-width:168px}#fly-hud .hud-big{font-size:25px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}#fly-hud .hud-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;margin-top:6px;font-variant-numeric:tabular-nums}#fly-hud .great{color:#21d6ef}#fly-hud .good{color:#49e900}#fly-hud .miss{color:#e5b43f}
+#fly-brain{position:absolute;top:14px;right:14px;padding:8px;width:196px}#fly-brain canvas{display:block;width:178px;height:108px}
+#fly-ur{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:0;width:min(520px,62%);background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important}#fly-ur canvas{display:block;width:100%;height:52px}#fly-ur .avg-error{display:flex;justify-content:space-between;gap:12px;margin-top:2px;font-size:11px;font-variant-numeric:tabular-nums;color:#c5d8ea;text-shadow:0 1px 3px #000}#fly-avg-error{color:#fff}
+#fly-fullscreen{position:absolute;right:14px;bottom:12px;z-index:5;background:rgba(8,14,25,.9);border:1px solid #7894b5;border-radius:7px;color:#fff;padding:7px 10px;pointer-events:auto}
+#fly-stage:fullscreen #fly-overlay{font-size:clamp(16px,1.35vw,22px)}#fly-stage:fullscreen #fly-hud{top:24px;left:24px;min-width:240px;padding:16px 20px}#fly-stage:fullscreen #fly-hud .hud-big{font-size:clamp(34px,3vw,50px)}#fly-stage:fullscreen #fly-hud .hud-stats{gap:6px 20px;margin-top:10px}#fly-stage:fullscreen #fly-brain{top:24px;right:24px;width:clamp(260px,22vw,380px);padding:12px}#fly-stage:fullscreen #fly-brain canvas{width:100%;height:auto;aspect-ratio:356/216}#fly-stage:fullscreen #fly-ur{bottom:24px;width:min(780px,62vw)}#fly-stage:fullscreen #fly-ur canvas{height:70px}#fly-stage:fullscreen #fly-ur .avg-error{font-size:15px;margin-top:7px}#fly-stage:fullscreen #fly-fullscreen{right:24px;bottom:24px;font-size:16px;padding:10px 14px}
+@media(max-width:650px){#fly-stage:fullscreen #fly-overlay{font-size:12px}#fly-stage:fullscreen #fly-hud{top:10px;left:10px;min-width:135px;padding:8px}#fly-stage:fullscreen #fly-hud .hud-big{font-size:20px}#fly-stage:fullscreen #fly-brain{top:10px;right:10px;width:145px;padding:6px}#fly-stage:fullscreen #fly-ur{left:10px;bottom:10px;transform:none;width:55%;padding:7px}#fly-stage:fullscreen #fly-ur canvas{height:34px}#fly-stage:fullscreen #fly-ur .avg-error{font-size:10px;margin-top:3px}#fly-stage:fullscreen #fly-fullscreen{right:10px;bottom:10px;font-size:12px;padding:7px}}
+@media(max-width:650px){#fly-hud{top:8px;left:8px;min-width:130px;padding:7px 8px;font-size:11px}#fly-hud .hud-big{font-size:18px}#fly-brain{top:8px;right:8px;width:142px;padding:5px}#fly-brain canvas{width:130px;height:79px}#fly-ur{bottom:8px;left:8px;transform:none;width:58%}#fly-fullscreen{right:8px;bottom:8px}}
+.brain-panel{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px;padding:20px}#brain{width:100%;height:360px;background:#0c1019;border-radius:8px;touch-action:none}#brain canvas{display:block;width:100%}#groups{white-space:pre-wrap;line-height:1.6;max-height:305px;overflow:auto;font-size:13px;color:#c1d0e5}#neural{font-size:14px;color:#a9dcee}
+a{color:#89c9ee}details{margin:20px 0;font-size:14px;line-height:1.6}summary{cursor:pointer;color:#bac9df}.tag{display:inline-block;background:#263445;border:1px solid #42566e;border-radius:5px;font-size:12px;padding:3px 8px;margin-right:8px}
+@media(max-width:650px){body{margin:16px auto}h1{font-size:22px}.brain-panel{grid-template-columns:1fr}#timeline{padding:10px}#clock{font-size:12px}#fly-stage{height:340px}}
+</style></head><body>
+<h1>Đang tải replay…</h1>
+<p class="subtle"><span id="checkpoint-label" class="tag">PHASE A · EPOCH 12</span> Giao diện taiko cũ · SV native · D/K = Kat · F/J = Don</p>
+<p><a href="create-replay.html">Upload .osz and create a v25 replay →</a></p>
+<p id="ideology-sv-link" hidden><a href="sv-ideology.html">Mở demo kiểm tra SV mới: tự chơi IDEALESS, không có model/con ruồi →</a></p>
+<p id="phase-a-link" hidden><a href="malecns-taiko.html?dataset=phase-a">Xem replay toàn bài từ checkpoint Phase A tốt nhất →</a></p>
+<label class="controls">Replay library <select id="library" aria-label="All saved replays" disabled><option>Loading replays…</option></select></label>
+<div class="controls">
+<select id="examples" aria-label="Version or section within this replay" disabled></select>
+<label>Skin <select id="skin" aria-label="Skin Taiko trên web"><option value="default">Default</option></select></label>
+<button id="play" disabled>Phát replay</button><button id="pause" disabled>Tạm dừng</button><button id="restart" disabled>Về đầu</button>
+<label>Âm lượng <input id="volume" type="range" min="0" max="1" step=".01" value=".65" aria-label="Âm lượng"></label>
+<label>Hitsound <input id="hit-volume" type="range" min="0" max="1" step=".01" value=".55" aria-label="Hitsound volume"></label>
+</div>
+<p id="status" role="status">Đang tải danh sách replay…</p><p id="metrics" class="subtle"></p>
+<div class="panel">
+<iframe id="viewer" src="taiko_viewer.html" title="Taiko replay player"></iframe>
+<div id="timeline"><input id="seek" aria-label="Thời gian replay" type="range" min="0" max="1" step="1" value="0" disabled><span id="clock">0:00 / 0:00</span></div>
+</div>
+<section class="fly-panel panel"><h2>Fly at the Taiko screen</h2>
+<div id="fly-stage" aria-label="3D fly at a Taiko screen with D F J K keys">
+<div id="fly-overlay">
+  <div id="fly-hud" class="hud-box"><div>ACCURACY</div><div id="fly-accuracy" class="hud-big">100.00%</div><div id="fly-time">0:00</div><div class="hud-stats"><span class="great">GREAT <b id="fly-great">0</b></span><span class="good">GOOD <b id="fly-good">0</b></span><span class="miss">MISS <b id="fly-miss">0</b></span><span>EXTRA <b id="fly-extra">0</b></span></div></div>
+  <div id="fly-brain" class="hud-box"><div>BRAIN ACTIVITY</div><canvas id="fly-brain-canvas" width="356" height="216" aria-label="Recorded neuron activity"></canvas></div>
+  <div id="fly-ur" class="hud-box"><canvas id="fly-ur-canvas" width="900" height="64" aria-label="Hit error meter"></canvas><div class="avg-error"><span>AVG HIT ERROR</span><b id="fly-avg-error">—</b></div></div>
+</div><button id="fly-fullscreen" type="button" aria-label="Fullscreen fly scene">⛶ Fullscreen</button></div>
+<p id="fly-status" class="subtle">Loading Flybody 3D…</p>
+<p class="subtle">Drag to rotate · Scroll to zoom · Keys and neuron activity come from the recorded replay.</p></section>
+<p id="fps" class="subtle">Taiko — FPS · 3D — FPS · target 120 (limited by display/browser).</p>
+<section class="input-panel panel"><h2>Ảnh mà model thực sự thấy</h2>
+<p class="subtle">Frame RGB được ghi trực tiếp lúc suy luận, không phải ảnh chụp giao diện taiko bên trên. Kích thước thực hiện bên dưới; v23 dùng 1000×300, bản cũ dùng 512×96. Đổi skin web không đổi ảnh này, cache hay kết quả model. Replay lưu một frame khoảng mỗi 48 ms; khung hình được giữ nguyên giữa các mốc ghi.</p>
+<canvas id="model-input" width="512" height="96" aria-label="Ảnh RGB đầu vào model đã ghi"></canvas>
+<p class="retina-label">Vùng thị giác lấy mẫu</p><canvas id="retina-input" width="137" height="53" aria-label="Vùng RGB được photoreceptor lấy mẫu"></canvas>
+<p class="subtle">Khung dưới là phần cắt nguyên pixel từ ảnh trên; các photoreceptor lấy mẫu theo vị trí riêng và nội suy song tuyến tính trong vùng này, không đọc mọi pixel của ảnh.</p>
+<p id="input-status" class="subtle">Đang tải ảnh đầu vào…</p></section>
+<div class="brain-panel panel">
+<section><h2>MaleCNS · soma theo ID thật</h2><div id="brain" aria-label="Vị trí soma và hoạt động neuron đã ghi"></div>
+<p class="subtle">Kéo để xoay. Đèn sáng theo thay đổi hoạt động <em>đã ghi</em> ở neuron mẫu. Camera xoay và chấm sáng chạy dọc kết nối đo được chỉ là hiệu ứng minh họa — không phải neuron di chuyển hay tín hiệu truyền được đo trực tiếp.</p></section>
+<section><h2>Hoạt động neuron đã ghi</h2><p id="neural">Đang tải trace…</p><pre id="groups"></pre></section>
+</div>
+<details><summary>Phạm vi mô phỏng và dữ liệu</summary>
+<p id="scope-description">Đang tải thông tin nguồn replay…</p>
+<p>165.122 neuron, 25.563.197 kết nối đo được; động lực graded-rate và bộ đọc phím là giả định mô hình, không phải mô phỏng sinh học đã kiểm chứng. Activity/voltage là proxy, không phải Hz/mV sinh học; mô hình không sinh spike rời rạc. Trace ghi khoảng mỗi 48 ms, không được tạo thêm trạng thái để giả 120 FPS. 120 FPS chỉ dành cho chuyển động và hiển thị.</p>
+<p>Giao diện taiko phía trên là lớp trình bày; khung RGB là ảnh được ghi lúc model chạy. Đây chưa phải điều khiển osu! thật. Một replay không chứng minh tổng quát hóa.</p>
+<p id="source-links">Đang tải nguồn dữ liệu…</p>
+<p>Flybody mesh: <a href="data/flybody/NOTICE.md">TuragaLab/flybody, Apache-2.0</a>. Cảnh 3D điều chỉnh từ <a href="https://github.com/cobanov/fly-connectome-template">fly-connectome-template</a> của <a href="https://github.com/cobanov">Mert Cobanov</a>.</p>
+</details>
+<script src="runtime-config.js"></script>
+<script type="module" src="malecns_taiko_demo.js?v=20261002-v25-public"></script>
+<script type="module" src="fly_taiko_scene.js?v=kat-lean-1"></script>
+</body></html>

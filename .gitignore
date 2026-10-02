@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env*
+!.env.example
+runs/
+connectome_data
+*.pt
+*.pth
+*.osz
+node_modules/
+dist-public/
+.vercel/
+web-fly/public/demos/
+web-fly/public/beatmaps/
+web-fly/public/skins/
